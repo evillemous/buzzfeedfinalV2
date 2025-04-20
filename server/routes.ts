@@ -167,6 +167,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create article' });
     }
   });
+  
+  // Update article
+  app.patch('/api/articles/:id', isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const article = await storage.getArticle(id);
+      
+      if (!article) {
+        return res.status(404).json({ message: 'Article not found' });
+      }
+      
+      // Validate the update data (partial validation)
+      const updateData = req.body;
+      
+      // Update article in storage
+      const updatedArticle = await storage.updateArticle(id, updateData);
+      res.json(updatedArticle);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: 'Invalid article data', errors: error.errors });
+      }
+      res.status(500).json({ message: 'Failed to update article' });
+    }
+  });
+  
+  // Delete article
+  app.delete('/api/articles/:id', isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const article = await storage.getArticle(id);
+      
+      if (!article) {
+        return res.status(404).json({ message: 'Article not found' });
+      }
+      
+      await storage.deleteArticle(id);
+      res.json({ success: true, message: 'Article deleted successfully' });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to delete article' });
+    }
+  });
 
   app.post('/api/admin/categories', async (req, res) => {
     try {

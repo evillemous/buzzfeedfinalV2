@@ -22,6 +22,7 @@ export interface IStorage {
   
   // Article methods
   getArticles(limit?: number, offset?: number): Promise<Article[]>;
+  getArticle(id: number): Promise<Article | undefined>;
   getArticleBySlug(slug: string): Promise<Article | undefined>;
   getFeaturedArticles(limit?: number): Promise<Article[]>;
   getArticlesByCategory(categoryId: number, limit?: number): Promise<Article[]>;
@@ -29,6 +30,8 @@ export interface IStorage {
   getPopularArticles(limit?: number): Promise<Article[]>;
   getRelatedArticles(articleId: number, limit?: number): Promise<Article[]>;
   createArticle(article: InsertArticle): Promise<Article>;
+  updateArticle(id: number, article: Partial<Article>): Promise<Article>;
+  deleteArticle(id: number): Promise<void>;
   incrementArticleViews(id: number): Promise<void>;
   incrementArticleShares(id: number): Promise<void>;
   
@@ -351,8 +354,40 @@ export class MemStorage implements IStorage {
       .slice(offset, offset + limit);
   }
 
+  async getArticle(id: number): Promise<Article | undefined> {
+    return this.articles.get(id);
+  }
+  
   async getArticleBySlug(slug: string): Promise<Article | undefined> {
     return Array.from(this.articles.values()).find(article => article.slug === slug);
+  }
+  
+  async updateArticle(id: number, articleData: Partial<Article>): Promise<Article> {
+    const existingArticle = this.articles.get(id);
+    if (!existingArticle) {
+      throw new Error(`Article with ID ${id} not found`);
+    }
+    
+    const updatedArticle = { ...existingArticle, ...articleData };
+    this.articles.set(id, updatedArticle);
+    
+    return updatedArticle;
+  }
+  
+  async deleteArticle(id: number): Promise<void> {
+    if (!this.articles.has(id)) {
+      throw new Error(`Article with ID ${id} not found`);
+    }
+    
+    this.articles.delete(id);
+    
+    // Remove any article-tag relationships
+    const articleTagsToDelete = Array.from(this.articlesTags.values())
+      .filter(at => at.articleId === id);
+      
+    for (const articleTag of articleTagsToDelete) {
+      this.articlesTags.delete(articleTag.id);
+    }
   }
 
   async getFeaturedArticles(limit: number = 1): Promise<Article[]> {
@@ -521,9 +556,45 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(articles.publishDate));
   }
 
+  async getArticle(id: number): Promise<Article | undefined> {
+    const result = await db.select().from(articles).where(eq(articles.id, id));
+    return result[0];
+  }
+  
   async getArticleBySlug(slug: string): Promise<Article | undefined> {
     const result = await db.select().from(articles).where(eq(articles.slug, slug));
     return result[0];
+  }
+  
+  async updateArticle(id: number, articleData: Partial<Article>): Promise<Article> {
+    const result = await db
+      .update(articles)
+      .set(articleData)
+      .where(eq(articles.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error(`Article with ID ${id} not found`);
+    }
+    
+    return result[0];
+  }
+  
+  async deleteArticle(id: number): Promise<void> {
+    // Delete any article-tag relationships first
+    await db
+      .delete(articlesTags)
+      .where(eq(articlesTags.articleId, id));
+      
+    // Delete the article
+    const result = await db
+      .delete(articles)
+      .where(eq(articles.id, id))
+      .returning();
+      
+    if (result.length === 0) {
+      throw new Error(`Article with ID ${id} not found`);
+    }
   }
 
   async getFeaturedArticles(limit: number = 1): Promise<Article[]> {
