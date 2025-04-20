@@ -39,6 +39,15 @@ export default function AdminDashboard() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("generate");
   
+  // Batch generation states
+  const [batchCount, setBatchCount] = useState("10");
+  const [listiclePercentage, setListiclePercentage] = useState("40");
+  const [batchGenerating, setBatchGenerating] = useState(false);
+  const [batchResults, setBatchResults] = useState<{success: boolean; count: number; message: string} | null>(null);
+  
+  // Listicle states
+  const [listicleNumItems, setListicleNumItems] = useState("10");
+  
   // Form states
   const [topic, setTopic] = useState("");
   const [categoryId, setCategoryId] = useState("");
@@ -215,6 +224,140 @@ export default function AdminDashboard() {
     setActiveTab("generate");
   };
   
+  // Generate listicle content mutation
+  const generateListicleMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest<{
+        title: string;
+        content: string;
+        excerpt: string;
+      }>('/api/ai/generate-listicle', {
+        method: 'POST',
+        body: JSON.stringify({
+          topic,
+          numItems: parseInt(listicleNumItems),
+          targetLength: parseInt(targetLength),
+        }),
+      });
+    },
+    onSuccess: (data) => {
+      setPreviewTitle(data.title);
+      setPreviewContent(data.content);
+      setPreviewExcerpt(data.excerpt);
+      
+      toast({
+        title: "Listicle Generated",
+        description: `Your "${data.title}" listicle has been generated successfully.`,
+      });
+      
+      setActiveTab("preview");
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Generation Failed",
+        description: "Failed to generate listicle content. Please try again.",
+      });
+    }
+  });
+  
+  // Create listicle mutation
+  const createListicleMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest<{ article: any, message: string }>('/api/ai/create-listicle', {
+        method: 'POST',
+        body: JSON.stringify({
+          topic,
+          categoryId: parseInt(categoryId),
+          numItems: parseInt(listicleNumItems),
+          targetLength: parseInt(targetLength),
+          imageKeyword: imageKeyword || topic,
+        }),
+      });
+    },
+    onSuccess: () => {
+      // Reset form and previews
+      setTopic("");
+      setCategoryId("");
+      setTargetLength("800");
+      setImageKeyword("");
+      setListicleNumItems("10");
+      setPreviewTitle("");
+      setPreviewContent("");
+      setPreviewExcerpt("");
+      setPreviewImage("");
+      
+      // Invalidate articles cache to refresh lists
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      
+      toast({
+        title: "Listicle Published",
+        description: "Your listicle has been created and published successfully.",
+      });
+      
+      setActiveTab("generate");
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Publication Failed",
+        description: "Failed to publish the listicle. Please try again.",
+      });
+    }
+  });
+  
+  // Batch generate content mutation
+  const batchGenerateMutation = useMutation({
+    mutationFn: async () => {
+      setBatchGenerating(true);
+      return apiRequest<{
+        success: boolean;
+        count: number;
+        message: string;
+      }>('/api/ai/batch-generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          count: parseInt(batchCount),
+          listiclePercentage: parseInt(listiclePercentage),
+        }),
+      });
+    },
+    onSuccess: (data) => {
+      setBatchResults(data);
+      setBatchGenerating(false);
+      
+      // Invalidate articles cache to refresh lists
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      
+      toast({
+        title: "Batch Generation Complete",
+        description: data.message,
+      });
+    },
+    onError: () => {
+      setBatchGenerating(false);
+      toast({
+        variant: "destructive",
+        title: "Batch Generation Failed",
+        description: "Failed to generate batch content. Please try again.",
+      });
+    }
+  });
+  
+  const handleGenerateListicle = (e: React.FormEvent) => {
+    e.preventDefault();
+    generateListicleMutation.mutate();
+  };
+  
+  const handleCreateListicle = () => {
+    createListicleMutation.mutate();
+  };
+  
+  const handleBatchGenerate = (e: React.FormEvent) => {
+    e.preventDefault();
+    batchGenerateMutation.mutate();
+  };
+
   const handleCreateArticle = () => {
     createArticleMutation.mutate();
   };
@@ -227,11 +370,13 @@ export default function AdminDashboard() {
       </p>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="generate">Generate Content</TabsTrigger>
-          <TabsTrigger value="ideas">Article Ideas</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="generate">Article</TabsTrigger>
+          <TabsTrigger value="listicle">Listicle</TabsTrigger>
+          <TabsTrigger value="batch">Batch Generate</TabsTrigger>
+          <TabsTrigger value="ideas">Ideas</TabsTrigger>
           <TabsTrigger value="preview" disabled={!previewContent}>
-            Preview & Publish
+            Preview
           </TabsTrigger>
         </TabsList>
         
@@ -398,6 +543,198 @@ export default function AdminDashboard() {
           </Card>
         </TabsContent>
         
+        {/* Listicle Tab */}
+        <TabsContent value="listicle">
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Listicle Generator</CardTitle>
+              <CardDescription>
+                Create engaging, high-converting listicles that drive clicks and pageviews.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleGenerateListicle} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="listicleTopic">List Topic</Label>
+                  <Input
+                    id="listicleTopic"
+                    placeholder="E.g., Best Productivity Apps of 2025"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={categoryId}
+                    onValueChange={setCategoryId}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories?.map((category) => (
+                        <SelectItem 
+                          key={category.id} 
+                          value={category.id.toString()}
+                        >
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="listicleNumItems">
+                    Number of Items (5-20)
+                  </Label>
+                  <Input
+                    id="listicleNumItems"
+                    type="number"
+                    placeholder="10"
+                    min="5"
+                    max="20"
+                    value={listicleNumItems}
+                    onChange={(e) => setListicleNumItems(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500">
+                    Listicles with 10+ items perform better for ad revenue.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="targetLength">
+                    Total Word Count (600-2000)
+                  </Label>
+                  <Input
+                    id="targetLength"
+                    type="number"
+                    placeholder="1000"
+                    min="600"
+                    max="2000"
+                    value={targetLength}
+                    onChange={(e) => setTargetLength(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="imageKeyword">
+                    Image Keyword (Optional)
+                  </Label>
+                  <Input
+                    id="imageKeyword"
+                    placeholder="Leave blank to use topic"
+                    value={imageKeyword}
+                    onChange={(e) => setImageKeyword(e.target.value)}
+                  />
+                </div>
+              </form>
+            </CardContent>
+            <CardFooter className="flex justify-between">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveTab("ideas")}
+              >
+                Need Ideas?
+              </Button>
+              <Button 
+                onClick={handleGenerateListicle}
+                disabled={!topic || !categoryId || generateListicleMutation.isPending}
+              >
+                {generateListicleMutation.isPending ? "Generating..." : "Generate Listicle"}
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        {/* Batch Generate Tab */}
+        <TabsContent value="batch">
+          <Card>
+            <CardHeader>
+              <CardTitle>Batch Content Generator</CardTitle>
+              <CardDescription>
+                Quickly generate multiple pieces of content across different categories to populate your site.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleBatchGenerate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="batchCount">
+                    Number of Articles (1-50)
+                  </Label>
+                  <Input
+                    id="batchCount"
+                    type="number"
+                    placeholder="10"
+                    min="1"
+                    max="50"
+                    value={batchCount}
+                    onChange={(e) => setBatchCount(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500">
+                    How many articles to generate in this batch. Default is 10.
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="listiclePercentage">
+                    Listicle Percentage (0-100)
+                  </Label>
+                  <Input
+                    id="listiclePercentage"
+                    type="number"
+                    placeholder="40"
+                    min="0"
+                    max="100"
+                    value={listiclePercentage}
+                    onChange={(e) => setListiclePercentage(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500">
+                    What percentage of generated content should be listicles vs regular articles. Default is 40%.
+                  </p>
+                </div>
+                
+                <div className="border rounded-md p-4 mt-6">
+                  <h3 className="font-medium mb-2">Important Notes:</h3>
+                  <ul className="space-y-2 text-sm text-gray-600">
+                    <li>• Batch generation can take several minutes depending on the number of articles.</li>
+                    <li>• Articles will be generated across random categories. If a category doesn't exist, it will be created.</li>
+                    <li>• All articles will be published immediately with random images.</li>
+                    <li>• The system will generate interesting, clickable titles to maximize engagement.</li>
+                  </ul>
+                </div>
+                
+                {batchResults && (
+                  <div className={`p-4 rounded-md mt-4 ${batchResults.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                    <h3 className={`font-medium ${batchResults.success ? 'text-green-800' : 'text-red-800'}`}>
+                      {batchResults.success ? 'Generation Complete' : 'Generation Failed'}
+                    </h3>
+                    <p className="mt-1 text-sm">
+                      {batchResults.message}
+                    </p>
+                  </div>
+                )}
+              </form>
+            </CardContent>
+            <CardFooter>
+              <Button 
+                onClick={handleBatchGenerate}
+                disabled={batchGenerating}
+                className="w-full"
+              >
+                {batchGenerating ? 
+                  "Generating Content (This may take a few minutes)..." : 
+                  `Generate ${batchCount} Articles/Listicles`
+                }
+              </Button>
+            </CardFooter>
+          </Card>
+        </TabsContent>
+        
         {/* Preview & Publish Tab */}
         <TabsContent value="preview">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -478,7 +815,7 @@ export default function AdminDashboard() {
                         className="w-full"
                         disabled={!previewTitle || !previewContent || !categoryId}
                       >
-                        Publish Article
+                        Publish Content
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -491,10 +828,12 @@ export default function AdminDashboard() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
-                          onClick={handleCreateArticle}
-                          disabled={createArticleMutation.isPending}
+                          onClick={activeTab === "listicle" ? handleCreateListicle : handleCreateArticle}
+                          disabled={createArticleMutation.isPending || createListicleMutation.isPending}
                         >
-                          {createArticleMutation.isPending ? "Publishing..." : "Publish Now"}
+                          {createArticleMutation.isPending || createListicleMutation.isPending ? 
+                            "Publishing..." : 
+                            "Publish Now"}
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
