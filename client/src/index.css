@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Image loading states */
+.image-loading {
+  min-height: 200px;
+  background-color: #f0f0f0;
+  background-image: linear-gradient(90deg, #f0f0f0, #f8f8f8, #f0f0f0);
+  background-size: 200% 100%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.image-loading-error {
+  border: 1px solid #f0f0f0;
+}
+
+.listicle-image {
+  display: block;
+  margin: 1.5rem auto;
+  max-width: 100%;
+  border-radius: 0.5rem;
+}
+
+@keyframes pulse {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: -200% 0%;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;

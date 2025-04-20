@@ -130,15 +130,11 @@ export default function ArticlePage() {
                   {article.title}
                 </h1>
                 
-                <div className="flex items-center mb-6">
-                  <div className="w-10 h-10 rounded-full bg-gray-300 mr-3" />
-                  <div>
-                    <div className="font-medium">{author?.fullName || 'Anonymous'}</div>
-                    <div className="text-sm text-gray-500 font-['Inter']">
-                      {category?.name && `${category.name} Editor`} • {formattedDate} • {article.readTime} min read
-                    </div>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="text-sm text-gray-500 font-['Inter']">
+                    {formattedDate} • {article.readTime} min read
                   </div>
-                  <div className="ml-auto">
+                  <div>
                     {article && <ShareButtons article={{ title: article.title, slug: article.slug }} compact={true} />}
                   </div>
                 </div>
