@@ -28,7 +28,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
             <h3 className="text-xl font-['Roboto_Condensed'] font-bold mb-4">
-              Trend<span className="text-[#FF4500]">Now</span>
+              your<span className="text-[#FF4500]">buzzfeed</span>
             </h3>
             <p className="text-gray-400 text-sm">Stay ahead of the curve with the latest stories and insights on topics that matter.</p>
             <div className="flex space-x-4 mt-4">
@@ -87,7 +87,7 @@ export default function Footer() {
         </div>
         
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400 text-sm">
-          <p>&copy; {new Date().getFullYear()} TrendNow. All rights reserved.</p>
+          <p>&copy; {new Date().getFullYear()} yourbuzzfeed. All rights reserved.</p>
         </div>
       </div>
     </footer>

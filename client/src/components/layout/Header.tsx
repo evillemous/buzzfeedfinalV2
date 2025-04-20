@@ -36,7 +36,7 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center">
             <span className="text-[#0066CC] text-2xl font-['Roboto_Condensed'] font-bold">
-              Trend<span className="text-[#FF4500]">Now</span>
+              your<span className="text-[#FF4500]">buzzfeed</span>
             </span>
           </Link>
           
