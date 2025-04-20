@@ -11,3 +11,57 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 }
+
+/* Article Content Styling */
+.article-content {
+  @apply text-base text-gray-800 leading-relaxed;
+}
+
+.article-content h2 {
+  @apply text-2xl font-bold mb-4 mt-6 text-gray-900 border-b border-gray-200 pb-2;
+}
+
+.article-content h3 {
+  @apply text-xl font-semibold mb-3 mt-5 text-gray-900;
+}
+
+.article-content p {
+  @apply mb-4;
+}
+
+.article-content strong {
+  @apply font-bold text-gray-900;
+}
+
+.article-content ul {
+  @apply pl-6 mb-4 list-disc space-y-2;
+}
+
+.article-content ol {
+  @apply pl-6 mb-4 list-decimal space-y-2;
+}
+
+.article-content li {
+  @apply mb-1;
+}
+
+.article-content blockquote {
+  @apply pl-4 border-l-4 border-gray-300 italic my-4 py-2 text-gray-600 bg-gray-50 rounded-r;
+}
+
+.article-content .ad-break {
+  @apply my-6 py-2;
+}
+
+.article-content figure {
+  @apply my-6;
+}
+
+.article-content figcaption {
+  @apply text-sm text-gray-500 italic mt-2 text-center;
+}
+
+/* Listicle specific styling */
+.article-content h2:not(:first-child) {
+  @apply mt-10;
+}

@@ -135,9 +135,21 @@ async function generateNewsArticle(headline: { title: string, url: string }): Pr
     
     // Generate article content using OpenAI
     const prompt = `Write a detailed news article based on this headline: "${headline.title}". 
-    The article should be factual, informative, and read like a professional news piece. 
-    Include potential implications and contextual background. Don't make up specific quotes 
-    or statistics unless they are common knowledge.`;
+    
+    FORMAT REQUIREMENTS (VERY IMPORTANT):
+    - Structure the article with a clear introduction, body, and conclusion
+    - Start with an attention-grabbing intro paragraph using <p> tags
+    - Use 4-5 informative subheadings (<h2> tags) to organize the content
+    - Include <strong> tags for emphasis on key statistics or important facts
+    - Add <blockquote> elements for analysis or expert opinions
+    - Include at least one bulleted list (<ul> with <li> items) for key points
+    - Insert a <div class="ad-break"></div> tag after every 2-3 paragraphs for ad placement
+    - Keep paragraphs short (3-4 sentences maximum)
+    - End with a conclusion paragraph summarizing the key implications
+    
+    The article should be factual, informative, and read like a professional news piece.
+    Include contextual background and analysis. Don't make up specific quotes or statistics
+    unless they are common knowledge.`;
     
     const { title, content, excerpt } = await generateArticleContent(prompt, 800);
     

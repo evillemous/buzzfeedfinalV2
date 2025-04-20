@@ -29,10 +29,21 @@ export async function generateArticleContent(topic: string, targetLength: number
           role: "system",
           content: `You are a professional content writer creating articles for a viral news website called yourbuzzfeed.
           Create engaging, click-worthy content that will make readers want to share the article.
-          Format the response as HTML with proper paragraph (<p>), heading (<h2>, <h3>), and list (<ul>, <li>) tags.
+          
+          FORMAT REQUIREMENTS (VERY IMPORTANT):
+          - Format the response as HTML with proper tags
+          - Start with an attention-grabbing intro paragraph
+          - Include 4-6 subheadings (<h2> tags) to break up the content
+          - Each section under a subheading should have 2-3 paragraphs (<p> tags)
+          - Use <strong> tags for emphasis on key points
+          - Include at least one bulleted list (<ul> with <li> items)
+          - Add blockquotes (<blockquote>) for interesting quotes or statistics
+          - End with a compelling conclusion paragraph
+          - Keep paragraphs short (3-4 sentences maximum)
+          - Insert a <div class="ad-break"></div> tag between major sections for ad placement
+          
           Write approximately ${targetLength} words.
-          Include 4-6 subheadings to break up the content.
-          The article should be optimized for AdSense placement with good paragraph breaks.
+          The article should be visually structured for easy reading and optimized for AdSense placement.
           Output must be in this JSON format: { "title": "catchy title", "content": "full HTML content", "excerpt": "compelling 1-2 sentence excerpt" }`
         },
         {
@@ -127,18 +138,26 @@ export async function generateListicleContent(
           role: "system",
           content: `You are a professional content writer creating viral listicles for a website called yourbuzzfeed.
           Create an engaging, shareable listicle with exactly ${numItems} items.
-          The title should be catchy and include the number of items (e.g., "10 Shocking Ways..." or "${numItems} Incredible Facts...").
-          Format the response as HTML with:
-          - Each list item should have an <h2> heading with the item number, e.g., "<h2>1. Item Title</h2>"
-          - Each item should have 1-3 paragraphs of engaging content
-          - Add occasional <img> placeholder tags with alt text but empty src (will be replaced later)
-          - Write approximately ${targetLength} words total
-          - The listicle should be optimized for AdSense placement with good paragraph breaks
+          
+          FORMAT REQUIREMENTS (VERY IMPORTANT):
+          - Begin with an attention-grabbing introduction paragraph (<p> tag)
+          - The title must include the number of items (e.g., "${numItems} Shocking Ways..." or "${numItems} Incredible Facts...")
+          - Format each list item with: 
+             * <h2> heading with item number (e.g., "<h2>1. Interesting Item Title</h2>")
+             * Bold intro sentence using <p><strong>Start with an interesting fact or hook.</strong> Then continue...</p>
+             * Each list item should have 2-3 paragraphs of engaging content
+             * At least 3 items should include a bulleted list (<ul> with <li> items)
+             * Add <blockquote> elements for interesting quotes or facts
+          - Insert a <div class="ad-break"></div> tag after every 3 list items for ad placement
+          - Add a compelling conclusion paragraph at the end
+          - Keep paragraphs short (3-4 sentences maximum)
+          - Include an occasional <figure> with <figcaption> for image placeholders
+          - Total word count should be approximately ${targetLength} words
           
           Output must be in this JSON format: { 
             "title": "catchy title with the number ${numItems} in it", 
             "content": "full HTML content with numbered list items", 
-            "excerpt": "compelling 1-2 sentence excerpt that teases the content" 
+            "excerpt": "compelling 1-2 sentence excerpt that teases the most interesting items" 
           }`
         },
         {
