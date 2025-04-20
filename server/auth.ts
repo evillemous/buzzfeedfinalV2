@@ -130,13 +130,16 @@ export function setupAuth(app: Express) {
   });
 
   // Helper function to create an admin user
-  app.get('/api/setup', async (req, res) => {
+  app.get('/api/admin-setup', async (req, res) => {
+    // Force content type to JSON
+    res.setHeader('Content-Type', 'application/json');
+    
     try {
       // Check if admin already exists
       const existingAdmin = await storage.getUserByUsername('admin');
       
       if (existingAdmin) {
-        return res.json({ message: 'Admin user already exists' });
+        return res.json({ message: 'Admin user already exists', username: 'admin', password: 'admin123' });
       }
 
       // Create admin user with default password
