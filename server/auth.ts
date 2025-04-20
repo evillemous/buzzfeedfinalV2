@@ -30,10 +30,29 @@ async function hashPassword(password: string): Promise<string> {
 
 // Compare passwords
 async function verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
-  const [hashedPart, salt] = hashedPassword.split('.');
-  const hashedBuf = Buffer.from(hashedPart, 'hex');
-  const suppliedBuf = (await scryptAsync(plainPassword, salt, 64)) as Buffer;
-  return timingSafeEqual(hashedBuf, suppliedBuf);
+  try {
+    // Make sure the hashed password contains the delimiter
+    if (!hashedPassword.includes('.')) {
+      console.error('Invalid password format');
+      return false;
+    }
+    
+    const [hashedPart, salt] = hashedPassword.split('.');
+    
+    // Check that we have both parts
+    if (!hashedPart || !salt) {
+      console.error('Missing parts in password hash');
+      return false;
+    }
+    
+    const hashedBuf = Buffer.from(hashedPart, 'hex');
+    const suppliedBuf = (await scryptAsync(plainPassword, salt, 64)) as Buffer;
+    
+    return timingSafeEqual(hashedBuf, suppliedBuf);
+  } catch (error) {
+    console.error('Error verifying password:', error);
+    return false;
+  }
 }
 
 // Middleware to check if user is authenticated
@@ -132,7 +151,7 @@ export function setupAuth(app: Express) {
     }
   });
 
-  // Helper function to create an admin user
+  // Helper function to create or reset admin user
   app.get('/api/admin-setup', async (req, res) => {
     // Force content type to JSON
     res.setHeader('Content-Type', 'application/json');
@@ -142,7 +161,15 @@ export function setupAuth(app: Express) {
       const existingAdmin = await storage.getUserByUsername('admin');
       
       if (existingAdmin) {
-        return res.json({ message: 'Admin user already exists', username: 'admin', password: 'admin123' });
+        // Update the admin password to ensure it's in the correct format
+        const hashedPassword = await hashPassword('admin123');
+        await storage.updateUser(existingAdmin.id, { password: hashedPassword });
+        
+        return res.json({ 
+          message: 'Admin user password reset successfully',
+          username: 'admin', 
+          password: 'admin123' 
+        });
       }
 
       // Create admin user with default password
@@ -156,7 +183,11 @@ export function setupAuth(app: Express) {
         isAdmin: true
       });
 
-      res.json({ message: 'Admin user created successfully' });
+      res.json({ 
+        message: 'Admin user created successfully',
+        username: 'admin',
+        password: 'admin123'
+      });
     } catch (error) {
       console.error('Setup error:', error);
       res.status(500).json({ error: 'Internal server error' });

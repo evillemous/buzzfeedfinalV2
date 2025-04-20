@@ -14,6 +14,7 @@ export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: number, userData: Partial<User>): Promise<User>;
   
   // Category methods
   getCategories(): Promise<Category[]>;
@@ -330,6 +331,17 @@ export class MemStorage implements IStorage {
     this.users.set(id, newUser);
     return newUser;
   }
+  
+  async updateUser(id: number, userData: Partial<User>): Promise<User> {
+    const user = await this.getUser(id);
+    if (!user) {
+      throw new Error(`User with ID ${id} not found`);
+    }
+    
+    const updatedUser = { ...user, ...userData };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
 
   // Categories
   async getCategories(): Promise<Category[]> {
@@ -528,6 +540,20 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(user: InsertUser): Promise<User> {
     const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+  
+  async updateUser(id: number, userData: Partial<User>): Promise<User> {
+    const result = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error(`User with ID ${id} not found`);
+    }
+    
     return result[0];
   }
 
