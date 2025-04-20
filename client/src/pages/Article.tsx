@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { useEffect, useState } from "react";
 import AdPlacement from "@/components/ads/AdPlacement";
+import AdContentRenderer from "@/components/ads/AdContentRenderer";
 import Sidebar from "@/components/layout/Sidebar";
 import RelatedArticles from "@/components/articles/RelatedArticles";
 import { Article, Category, User } from "@shared/schema";
@@ -161,14 +162,10 @@ export default function ArticlePage() {
                 
                 {/* Article Content with Ads */}
                 <div className="article-content text-gray-800 leading-relaxed">
-                  <div dangerouslySetInnerHTML={{ __html: contentParts[0] }} />
-                  
-                  {/* In-content Ad #1 */}
-                  <AdPlacement 
-                    type="in-content"
-                    className="w-full h-24 my-6"
-                    label="In-content ad placement"
-                  />
+                  {/* First section of content */}
+                  {contentParts[0] && (
+                    <AdContentRenderer content={contentParts[0]} />
+                  )}
                   
                   {/* Show "Continue Reading" button if there's more content */}
                   {contentParts[1] && !showFullContent && (
@@ -183,16 +180,10 @@ export default function ArticlePage() {
                   )}
                   
                   {/* Show the rest of the content if "Continue Reading" was clicked */}
-                  {showFullContent && (
+                  {showFullContent && contentParts[1] && (
                     <>
-                      <div dangerouslySetInnerHTML={{ __html: contentParts[1] }} />
-                      
-                      {/* In-content Ad #2 */}
-                      <AdPlacement 
-                        type="in-content"
-                        className="w-full h-24 my-6"
-                        label="In-content ad placement"
-                      />
+                      {/* Second section of content */}
+                      <AdContentRenderer content={contentParts[1]} />
                     </>
                   )}
                 </div>
