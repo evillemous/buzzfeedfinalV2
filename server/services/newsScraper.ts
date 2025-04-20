@@ -13,25 +13,25 @@ import { getRandomImage } from './unsplash';
 // Sources to scrape news from
 const NEWS_SOURCES = [
   {
-    name: 'Reuters',
-    url: 'https://www.reuters.com/world/',
-    selector: 'a.text__headline',
+    name: 'NY Times Archive',
+    url: 'https://www.nytimes.com/section/us',
+    selector: 'div.css-1cp3ece h3 a',
     titleSelector: '',
-    baseUrl: 'https://www.reuters.com'
+    baseUrl: 'https://www.nytimes.com'
   },
   {
-    name: 'AP News',
-    url: 'https://apnews.com/hub/trending-news',
-    selector: '.PageList-items-item a',
-    titleSelector: '.CardHeadline-title',
-    baseUrl: ''
+    name: 'BBC News',
+    url: 'https://www.bbc.com/news',
+    selector: 'a.gs-c-promo-heading',
+    titleSelector: '',
+    baseUrl: 'https://www.bbc.com'
   },
   {
-    name: 'NPR',
-    url: 'https://www.npr.org/sections/news/',
-    selector: 'h2.title a',
+    name: 'The Guardian',
+    url: 'https://www.theguardian.com/us-news',
+    selector: 'a.u-faux-block-link__overlay',
     titleSelector: '',
-    baseUrl: ''
+    baseUrl: 'https://www.theguardian.com'
   }
 ];
 
@@ -56,8 +56,23 @@ async function fetchHeadlines(source: typeof NEWS_SOURCES[0]): Promise<Array<{ti
   try {
     console.log(`Fetching headlines from ${source.name}...`);
     
-    // Fetch the HTML
-    const response = await axios.get(source.url);
+    // Configure axios with headers to mimic a browser request
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': 'https://www.google.com/',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache'
+    };
+    
+    // Fetch the HTML with a timeout
+    const response = await axios.get(source.url, { 
+      headers,
+      timeout: 10000,
+      maxRedirects: 5
+    });
+    
     const html = response.data;
     
     // Load HTML into cheerio
@@ -76,6 +91,9 @@ async function fetchHeadlines(source: typeof NEWS_SOURCES[0]): Promise<Array<{ti
         title = $(element).text().trim();
       }
       
+      // Remove extra whitespace and normalize
+      title = title.replace(/\s+/g, ' ').trim();
+      
       url = $(element).attr('href');
       
       // Handle relative URLs
@@ -84,7 +102,7 @@ async function fetchHeadlines(source: typeof NEWS_SOURCES[0]): Promise<Array<{ti
       }
       
       // Only add valid headlines
-      if (title && url && title.length > 10) {
+      if (title && url && title.length > 10 && !headlines.some(h => h.title === title)) {
         headlines.push({ title, url });
       }
     });

@@ -20,23 +20,8 @@ export default function LoginPage() {
     setErrorMessage("");
     
     try {
-      // Direct fetch approach instead of using mutation
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ username, password }),
-        credentials: "include",
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "Login failed");
-      }
-      
-      const userData = await response.json();
-      console.log("Login successful:", userData);
+      await loginMutation.mutateAsync({ username, password });
+      console.log("Login successful");
       
       // Redirect to admin page
       navigate("/admin");
