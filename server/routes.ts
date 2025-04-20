@@ -232,6 +232,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Simplified article creation for testing
+  app.post('/api/ai/create-test-article', async (req, res) => {
+    try {
+      // Create a simple test article with the admin user
+      const article = await storage.createArticle({
+        title: "Test Article",
+        slug: "test-article-" + Date.now(),
+        content: "<p>This is a test article content.</p>",
+        excerpt: "Test excerpt",
+        featuredImage: "https://images.unsplash.com/photo-1682687982167-d7fb3ed8541d",
+        categoryId: 1, // Health category
+        authorId: 1, // Admin user
+        published: true,
+        featured: false,
+        contentType: 'article',
+        readTime: 2
+      });
+      
+      res.status(201).json({
+        success: true,
+        article,
+        message: "Test article created successfully"
+      });
+    } catch (error) {
+      console.error('Error creating test article:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to create test article',
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Image Search Routes
   app.get('/api/images/search', isAdmin, async (req, res) => {
     try {
