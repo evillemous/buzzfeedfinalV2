@@ -71,13 +71,6 @@ export default function Header() {
               <i className="fas fa-bars text-lg"></i>
             </button>
             <Link 
-              href="/admin" 
-              className="hidden md:flex items-center text-sm font-['Inter'] font-medium px-3 py-1 rounded-full bg-[#333333] text-white mr-2"
-            >
-              <i className="fas fa-user-shield mr-1"></i>
-              Admin
-            </Link>
-            <Link 
               href="#" 
               className="hidden md:flex items-center text-sm font-['Inter'] font-medium px-3 py-1 rounded-full bg-[#0066CC] text-white"
             >

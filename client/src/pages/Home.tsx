@@ -5,8 +5,11 @@ import ArticleCard from "@/components/articles/ArticleCard";
 import AdPlacement from "@/components/ads/AdPlacement";
 import Sidebar from "@/components/layout/Sidebar";
 import { Article, Category } from "@shared/schema";
+import { useLocation } from "wouter";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
+  
   // Fetch featured article
   const { data: featuredArticle, isLoading: loadingFeatured } = useQuery<Article[]>({
     queryKey: ['/api/articles/featured'],
@@ -21,6 +24,70 @@ export default function Home() {
   const { data: categories, isLoading: loadingCategories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
+  
+  // Set up keyboard shortcut sequence for admin access (Alt+A+D+M+I+N)
+  useEffect(() => {
+    const keySequence: string[] = [];
+    const targetSequence = ['a', 'd', 'm', 'i', 'n'];
+    let altKeyPressed = false;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Track if Alt key is pressed
+      if (e.key === 'Alt') {
+        altKeyPressed = true;
+        return;
+      }
+      
+      // Only track keys if Alt key was pressed first
+      if (altKeyPressed) {
+        const key = e.key.toLowerCase();
+        keySequence.push(key);
+        
+        // Check if the sequence matches our target (Alt+A+D+M+I+N)
+        if (keySequence.length <= targetSequence.length) {
+          // Check if current sequence matches the expected sequence so far
+          for (let i = 0; i < keySequence.length; i++) {
+            if (keySequence[i] !== targetSequence[i]) {
+              // Reset sequence if wrong key is pressed
+              keySequence.length = 0;
+              altKeyPressed = false;
+              return;
+            }
+          }
+          
+          // If complete sequence is entered, navigate to admin login
+          if (keySequence.length === targetSequence.length) {
+            e.preventDefault();
+            setLocation('/login');
+            keySequence.length = 0;
+            altKeyPressed = false;
+          }
+        } else {
+          // Reset if sequence is too long
+          keySequence.length = 0;
+          altKeyPressed = false;
+        }
+      }
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Alt') {
+        // If Alt key is released without completing the sequence, reset
+        if (keySequence.length < targetSequence.length) {
+          keySequence.length = 0;
+          altKeyPressed = false;
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [setLocation]);
   
   // Find category for an article
   const findCategory = (categoryId: number | undefined) => {

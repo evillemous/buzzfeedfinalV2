@@ -63,14 +63,6 @@ export default function MobileMenu({ isOpen, onClose, categories }: MobileMenuPr
         
         <div className="mt-4 pt-3 border-t border-[#EFEFEF] space-y-3">
           <Link 
-            href="/admin" 
-            className="flex items-center justify-center text-sm font-['Inter'] font-medium px-3 py-2 rounded-full bg-[#333333] text-white"
-            onClick={onClose}
-          >
-            <i className="fas fa-user-shield mr-1"></i>
-            Admin Dashboard
-          </Link>
-          <Link 
             href="#" 
             className="flex items-center justify-center text-sm font-['Inter'] font-medium px-3 py-2 rounded-full bg-[#0066CC] text-white"
           >
