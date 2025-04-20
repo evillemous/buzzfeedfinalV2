@@ -97,3 +97,157 @@ export async function generateArticleIdeas(category: string, count: number = 5):
     throw new Error('Failed to generate article ideas');
   }
 }
+
+/**
+ * Generate listicle content using OpenAI
+ * 
+ * @param topic The list topic to generate
+ * @param numItems Number of items in the list (5-20)
+ * @param targetLength Target word count for the listicle
+ * @returns Generated listicle content with HTML formatting
+ */
+export async function generateListicleContent(
+  topic: string, 
+  numItems: number = 10, 
+  targetLength: number = 1000
+): Promise<{ 
+  title: string;
+  content: string;
+  excerpt: string;
+}> {
+  try {
+    // Ensure number of items is within reasonable bounds
+    numItems = Math.max(5, Math.min(20, numItems));
+    
+    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are a professional content writer creating viral listicles for a website called yourbuzzfeed.
+          Create an engaging, shareable listicle with exactly ${numItems} items.
+          The title should be catchy and include the number of items (e.g., "10 Shocking Ways..." or "${numItems} Incredible Facts...").
+          Format the response as HTML with:
+          - Each list item should have an <h2> heading with the item number, e.g., "<h2>1. Item Title</h2>"
+          - Each item should have 1-3 paragraphs of engaging content
+          - Add occasional <img> placeholder tags with alt text but empty src (will be replaced later)
+          - Write approximately ${targetLength} words total
+          - The listicle should be optimized for AdSense placement with good paragraph breaks
+          
+          Output must be in this JSON format: { 
+            "title": "catchy title with the number ${numItems} in it", 
+            "content": "full HTML content with numbered list items", 
+            "excerpt": "compelling 1-2 sentence excerpt that teases the content" 
+          }`
+        },
+        {
+          role: "user",
+          content: `Create a viral, shareable listicle with ${numItems} items about: ${topic}`
+        }
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
+
+    // Parse the JSON response
+    const content = response.choices[0].message.content || '{}';
+    const result = JSON.parse(content);
+    
+    return {
+      title: result.title || `${numItems} Amazing Facts About ${topic}`,
+      content: result.content || `<p>Content could not be generated</p>`,
+      excerpt: result.excerpt || `Discover these ${numItems} incredible facts about ${topic}!`
+    };
+  } catch (error) {
+    console.error('Error generating listicle content:', error);
+    throw new Error('Failed to generate listicle content');
+  }
+}
+
+/**
+ * Generate multiple articles in batch across different categories
+ * 
+ * @param count Number of articles to generate
+ * @param listiclePercentage Percentage of content that should be listicles (0-100)
+ * @returns Array of generated content
+ */
+export async function batchGenerateContent(
+  count: number = 10,
+  listiclePercentage: number = 40
+): Promise<Array<{
+  title: string;
+  content: string;
+  excerpt: string;
+  contentType: ContentType;
+  category?: string;
+}>> {
+  try {
+    // Get topic suggestions for batch generation
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are a viral content strategist for yourbuzzfeed. Generate a diverse set of ${count} content topics.
+          Each topic should include:
+          1. A topic name
+          2. A category it belongs to (Health, Finance, Technology, Celebrity, Travel, or Home)
+          3. Whether it should be a regular article or listicle format
+          
+          Format your response as a JSON array of objects with these properties: 
+          {
+            "topic": "Compelling topic", 
+            "category": "one of the categories mentioned", 
+            "contentType": "article | listicle"
+          }`
+        },
+        {
+          role: "user",
+          content: `Generate ${count} viral content topics for batch creation. 
+          Approximately ${listiclePercentage}% should be listicles.
+          The topics should be diverse and cover different categories (Health, Finance, Tech, Celebrity, Travel, Home)`
+        }
+      ],
+      temperature: 0.8,
+      response_format: { type: "json_object" }
+    });
+
+    // Parse the topics response
+    const topicsContent = response.choices[0].message.content || '{"topics":[]}';
+    const topicsResult = JSON.parse(topicsContent);
+    const topics = topicsResult.topics || [];
+    
+    // Generate content for each topic
+    const results = await Promise.all(
+      topics.map(async (topicInfo: { topic: string; category: string; contentType: ContentType }) => {
+        try {
+          let generatedContent;
+          
+          if (topicInfo.contentType === 'listicle') {
+            // Random number of items between 7 and 15
+            const numItems = Math.floor(Math.random() * 9) + 7;
+            generatedContent = await generateListicleContent(topicInfo.topic, numItems);
+          } else {
+            generatedContent = await generateArticleContent(topicInfo.topic);
+          }
+          
+          return {
+            ...generatedContent,
+            contentType: topicInfo.contentType,
+            category: topicInfo.category
+          };
+        } catch (error) {
+          console.error(`Error generating content for topic "${topicInfo.topic}":`, error);
+          return null;
+        }
+      })
+    );
+    
+    // Filter out any null results from failed generations
+    return results.filter(item => item !== null);
+  } catch (error) {
+    console.error('Error in batch content generation:', error);
+    throw new Error('Failed to generate batch content');
+  }
+}

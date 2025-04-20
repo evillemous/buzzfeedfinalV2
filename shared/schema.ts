@@ -32,6 +32,7 @@ export const articles = pgTable("articles", {
   categoryId: integer("category_id").references(() => categories.id),
   isPublished: boolean("is_published").default(true),
   isFeatured: boolean("is_featured").default(false),
+  contentType: text("content_type").default("article"), // 'article' or 'listicle'
   views: integer("views").default(0),
   shares: integer("shares").default(0),
   readTime: integer("read_time").default(5),
