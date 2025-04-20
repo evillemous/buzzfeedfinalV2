@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
@@ -51,6 +52,7 @@ export default function AdminDashboard() {
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
   
   // Listicle states
   const [listicleNumItems, setListicleNumItems] = useState("10");
@@ -455,11 +457,20 @@ export default function AdminDashboard() {
     setEditingArticle(null);
   };
   
-  // Filter articles by search term
-  const filteredArticles = articles?.filter(article => 
-    article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    article.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter articles by search term and content type
+  const filteredArticles = articles?.filter(article => {
+    // First apply search term filter
+    const matchesSearch = 
+      article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      article.excerpt.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Then apply content type filter
+    const matchesContentType = 
+      contentTypeFilter === "all" || 
+      article.contentType === contentTypeFilter;
+    
+    return matchesSearch && matchesContentType;
+  });
   
   return (
     <div className="container mx-auto py-8">
@@ -856,15 +867,34 @@ export default function AdminDashboard() {
               ) : (
                 // Article List
                 <>
-                  <div className="mb-4">
-                    <Label htmlFor="search">Search Articles</Label>
-                    <Input
-                      id="search"
-                      placeholder="Search by title or content..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="mt-1"
-                    />
+                  <div className="flex flex-col md:flex-row gap-4 mb-4">
+                    <div className="flex-1">
+                      <Label htmlFor="search">Search Articles</Label>
+                      <Input
+                        id="search"
+                        placeholder="Search by title or content..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="w-full md:w-48">
+                      <Label htmlFor="content-type-filter">Content Type</Label>
+                      <Select
+                        value={contentTypeFilter}
+                        onValueChange={setContentTypeFilter}
+                      >
+                        <SelectTrigger id="content-type-filter" className="mt-1">
+                          <SelectValue placeholder="Filter by type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Types</SelectItem>
+                          <SelectItem value="article">Articles</SelectItem>
+                          <SelectItem value="listicle">Listicles</SelectItem>
+                          <SelectItem value="news">News</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   
                   {articlesLoading ? (
@@ -878,6 +908,7 @@ export default function AdminDashboard() {
                           <TableRow>
                             <TableHead>Title</TableHead>
                             <TableHead>Category</TableHead>
+                            <TableHead className="hidden md:table-cell">Type</TableHead>
                             <TableHead className="hidden md:table-cell">Views</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
@@ -893,6 +924,15 @@ export default function AdminDashboard() {
                                   <div className="text-xs text-gray-500 truncate max-w-[200px]">{article.excerpt}</div>
                                 </TableCell>
                                 <TableCell>{category?.name || "Uncategorized"}</TableCell>
+                                <TableCell className="hidden md:table-cell">
+                                  <Badge variant={
+                                    article.contentType === 'listicle' ? "secondary" : 
+                                    article.contentType === 'news' ? "default" : 
+                                    "outline"
+                                  }>
+                                    {article.contentType || 'article'}
+                                  </Badge>
+                                </TableCell>
                                 <TableCell className="hidden md:table-cell">{article.views || 0}</TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end space-x-2">
