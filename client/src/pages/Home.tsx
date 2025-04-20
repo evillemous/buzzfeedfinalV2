@@ -25,67 +25,57 @@ export default function Home() {
     queryKey: ['/api/categories'],
   });
   
-  // Set up keyboard shortcut sequence for admin access (Alt+A+D+M+I+N)
+  // Set up keyboard shortcut sequence for admin access
   useEffect(() => {
+    // For tracking sequence of keys pressed
     const keySequence: string[] = [];
     const targetSequence = ['a', 'd', 'm', 'i', 'n'];
-    let altKeyPressed = false;
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Track if Alt key is pressed
-      if (e.key === 'Alt') {
-        altKeyPressed = true;
+      // Get the key pressed (case insensitive)
+      const key = e.key.toLowerCase();
+      
+      // If it's one of the modifier keys (Alt/Option or Meta/Command), ignore
+      if (key === 'alt' || key === 'meta' || key === 'shift' || key === 'control') {
         return;
       }
       
-      // Only track keys if Alt key was pressed first
-      if (altKeyPressed) {
-        const key = e.key.toLowerCase();
+      // Only process when Alt/Option is pressed (metaKey for Command on Mac)
+      if (e.altKey) {
+        // Add the current key to our sequence
         keySequence.push(key);
         
-        // Check if the sequence matches our target (Alt+A+D+M+I+N)
-        if (keySequence.length <= targetSequence.length) {
-          // Check if current sequence matches the expected sequence so far
-          for (let i = 0; i < keySequence.length; i++) {
-            if (keySequence[i] !== targetSequence[i]) {
-              // Reset sequence if wrong key is pressed
-              keySequence.length = 0;
-              altKeyPressed = false;
-              return;
-            }
+        // Check if the sequence matches so far
+        let isValid = true;
+        for (let i = 0; i < keySequence.length; i++) {
+          if (keySequence[i] !== targetSequence[i]) {
+            isValid = false;
+            break;
           }
-          
-          // If complete sequence is entered, navigate to admin login
-          if (keySequence.length === targetSequence.length) {
-            e.preventDefault();
-            setLocation('/login');
-            keySequence.length = 0;
-            altKeyPressed = false;
-          }
-        } else {
-          // Reset if sequence is too long
-          keySequence.length = 0;
-          altKeyPressed = false;
         }
-      }
-    };
-    
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        // If Alt key is released without completing the sequence, reset
-        if (keySequence.length < targetSequence.length) {
+        
+        // If invalid sequence, reset
+        if (!isValid) {
           keySequence.length = 0;
-          altKeyPressed = false;
+          return;
         }
+        
+        // If we've completed the sequence successfully
+        if (keySequence.length === targetSequence.length) {
+          e.preventDefault();
+          setLocation('/login');
+          keySequence.length = 0;
+        }
+      } else {
+        // Reset sequence if Alt/Option is not held down
+        keySequence.length = 0;
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
     
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [setLocation]);
   
