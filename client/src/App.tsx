@@ -8,8 +8,11 @@ import Home from "@/pages/Home";
 import Article from "@/pages/Article";
 import Category from "@/pages/Category";
 import Admin from "@/pages/Admin";
+import LoginPage from "@/pages/login-page";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { AuthProvider } from "@/hooks/use-auth";
+import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
   return (
@@ -20,7 +23,8 @@ function Router() {
           <Route path="/" component={Home} />
           <Route path="/article/:slug" component={Article} />
           <Route path="/category/:slug" component={Category} />
-          <Route path="/admin" component={Admin} />
+          <Route path="/login" component={LoginPage} />
+          <ProtectedRoute path="/admin" component={Admin} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -32,10 +36,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <AuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

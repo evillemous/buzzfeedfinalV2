@@ -19,13 +19,8 @@ import {
 } from "./services/entertainment";
 import { slugify } from "../client/src/lib/utils";
 
-// Middleware to check if user is admin (simplified for demo)
-const isAdmin = (req: Request, res: Response, next: Function) => {
-  // In a real app, you would check session/token
-  // For demo purposes, we'll just pass through
-  // TODO: Implement proper authentication
-  next();
-};
+// Import our authentication middleware
+import { isAuthenticated } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -169,7 +164,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update article
-  app.patch('/api/articles/:id', isAdmin, async (req, res) => {
+  app.patch('/api/articles/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const article = await storage.getArticle(id);
@@ -193,7 +188,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete article
-  app.delete('/api/articles/:id', isAdmin, async (req, res) => {
+  app.delete('/api/articles/:id', isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const article = await storage.getArticle(id);
@@ -210,7 +205,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Bulk delete articles
-  app.post('/api/articles/bulk-delete', isAdmin, async (req, res) => {
+  app.post('/api/articles/bulk-delete', isAuthenticated, async (req, res) => {
     try {
       const { ids } = req.body;
       
@@ -246,7 +241,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/admin/categories', async (req, res) => {
+  app.post('/api/admin/categories', isAuthenticated, async (req, res) => {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
@@ -260,7 +255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // AI Content Generation Routes
-  app.post('/api/ai/generate-content', isAdmin, async (req, res) => {
+  app.post('/api/ai/generate-content', isAuthenticated, async (req, res) => {
     try {
       const { topic, targetLength } = req.body;
       
@@ -280,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/ai/generate-ideas', isAdmin, async (req, res) => {
+  app.post('/api/ai/generate-ideas', isAuthenticated, async (req, res) => {
     try {
       const { category, count } = req.body;
       
@@ -306,12 +301,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "OpenAI connection is working correctly!",
         sample: testIdea[0]
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error testing OpenAI connection:', error);
       res.status(500).json({ 
         success: false, 
         message: 'Failed to connect to OpenAI API', 
-        error: error.message
+        error: error.message || 'Unknown error'
       });
     }
   });
@@ -350,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Image Search Routes
-  app.get('/api/images/search', isAdmin, async (req, res) => {
+  app.get('/api/images/search', isAuthenticated, async (req, res) => {
     try {
       const { query, page, perPage } = req.query;
       
@@ -371,7 +366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get('/api/images/random', isAdmin, async (req, res) => {
+  app.get('/api/images/random', isAuthenticated, async (req, res) => {
     try {
       const { query } = req.query;
       
@@ -393,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a complete article with AI content and image
-  app.post('/api/ai/create-article', isAdmin, async (req, res) => {
+  app.post('/api/ai/create-article', isAuthenticated, async (req, res) => {
     try {
       const { 
         topic, 
@@ -447,7 +442,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Generate listicle content
-  app.post('/api/ai/generate-listicle', isAdmin, async (req, res) => {
+  app.post('/api/ai/generate-listicle', isAuthenticated, async (req, res) => {
     try {
       const { topic, numItems, targetLength } = req.body;
       
@@ -469,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create a listicle with AI content and image
-  app.post('/api/ai/create-listicle', isAdmin, async (req, res) => {
+  app.post('/api/ai/create-listicle', isAuthenticated, async (req, res) => {
     try {
       const { 
         topic, 
@@ -527,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Batch content generation (multiple articles/listicles across categories)
-  app.post('/api/ai/batch-generate', isAdmin, async (req, res) => {
+  app.post('/api/ai/batch-generate', isAuthenticated, async (req, res) => {
     try {
       const { count, listiclePercentage } = req.body;
       
@@ -637,7 +632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // News scraping endpoints
-  app.post('/api/news/scrape', isAdmin, async (req, res) => {
+  app.post('/api/news/scrape', isAuthenticated, async (req, res) => {
     try {
       console.log('Manual news scraping initiated');
       const articlesCreated = await scrapeAndGenerateNews();
@@ -654,7 +649,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Entertainment content generation endpoints
-  app.post('/api/entertainment/generate', isAdmin, async (req, res) => {
+  app.post('/api/entertainment/generate', isAuthenticated, async (req, res) => {
     try {
       const { count, listiclePercentage } = req.body;
       
@@ -676,7 +671,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/entertainment/generate-article', isAdmin, async (req, res) => {
+  app.post('/api/entertainment/generate-article', isAuthenticated, async (req, res) => {
     try {
       console.log('Generating single entertainment article');
       const articleId = await generateEntertainmentArticle();
@@ -696,7 +691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post('/api/entertainment/generate-listicle', isAdmin, async (req, res) => {
+  app.post('/api/entertainment/generate-listicle', isAuthenticated, async (req, res) => {
     try {
       console.log('Generating entertainment listicle');
       const articleId = await generateEntertainmentListicle();

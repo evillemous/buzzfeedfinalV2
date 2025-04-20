@@ -6,6 +6,13 @@ import MemoryStore from 'memorystore';
 import { User } from '@shared/schema';
 import { storage } from './storage';
 
+// Extend the session interface to include userId
+declare module 'express-session' {
+  interface SessionData {
+    userId: number;
+  }
+}
+
 // Create memory store for sessions
 const MemStore = MemoryStore(session);
 const sessionStore = new MemStore({
@@ -140,7 +147,7 @@ export function setupAuth(app: Express) {
         password: hashedPassword,
         fullName: 'Administrator',
         email: 'admin@yourbuzzfeed.com',
-        role: 'admin'
+        isAdmin: true
       });
 
       res.json({ message: 'Admin user created successfully' });
