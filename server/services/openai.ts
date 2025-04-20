@@ -5,6 +5,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '' 
 });
 
+// Content types
+export type ContentType = 'article' | 'listicle';
+
 /**
  * Generate article content using OpenAI
  * 
