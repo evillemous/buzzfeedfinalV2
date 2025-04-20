@@ -53,6 +53,7 @@ export default function AdminDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
+  const [sortCriterion, setSortCriterion] = useState<string>("newest");
   
   // Listicle states
   const [listicleNumItems, setListicleNumItems] = useState("10");
@@ -470,6 +471,20 @@ export default function AdminDashboard() {
       article.contentType === contentTypeFilter;
     
     return matchesSearch && matchesContentType;
+  })?.sort((a, b) => {
+    // Sort articles based on selected criterion
+    switch (sortCriterion) {
+      case "newest":
+        return new Date(b.publishDate || 0).getTime() - new Date(a.publishDate || 0).getTime();
+      case "oldest":
+        return new Date(a.publishDate || 0).getTime() - new Date(b.publishDate || 0).getTime();
+      case "most-viewed":
+        return (b.views || 0) - (a.views || 0);
+      case "alphabetical":
+        return a.title.localeCompare(b.title);
+      default:
+        return new Date(b.publishDate || 0).getTime() - new Date(a.publishDate || 0).getTime();
+    }
   });
   
   return (
@@ -867,6 +882,36 @@ export default function AdminDashboard() {
               ) : (
                 // Article List
                 <>
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    {(() => {
+                      const totalArticles = articles?.length || 0;
+                      const articleCount = articles?.filter(a => a.contentType === 'article' || !a.contentType).length || 0;
+                      const listicleCount = articles?.filter(a => a.contentType === 'listicle').length || 0;
+                      const newsCount = articles?.filter(a => a.contentType === 'news').length || 0;
+
+                      return (
+                        <>
+                          <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border">
+                            <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Content</div>
+                            <div className="text-2xl font-bold mt-1">{totalArticles}</div>
+                          </div>
+                          <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border">
+                            <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Articles</div>
+                            <div className="text-2xl font-bold mt-1">{articleCount}</div>
+                          </div>
+                          <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border">
+                            <div className="text-sm font-medium text-slate-500 dark:text-slate-400">Listicles</div>
+                            <div className="text-2xl font-bold mt-1">{listicleCount}</div>
+                          </div>
+                          <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border">
+                            <div className="text-sm font-medium text-slate-500 dark:text-slate-400">News</div>
+                            <div className="text-2xl font-bold mt-1">{newsCount}</div>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+
                   <div className="flex flex-col md:flex-row gap-4 mb-4">
                     <div className="flex-1">
                       <Label htmlFor="search">Search Articles</Label>
@@ -878,7 +923,7 @@ export default function AdminDashboard() {
                         className="mt-1"
                       />
                     </div>
-                    <div className="w-full md:w-48">
+                    <div className="w-full md:w-40">
                       <Label htmlFor="content-type-filter">Content Type</Label>
                       <Select
                         value={contentTypeFilter}
@@ -892,6 +937,23 @@ export default function AdminDashboard() {
                           <SelectItem value="article">Articles</SelectItem>
                           <SelectItem value="listicle">Listicles</SelectItem>
                           <SelectItem value="news">News</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="w-full md:w-40">
+                      <Label htmlFor="sort-criterion">Sort By</Label>
+                      <Select
+                        value={sortCriterion}
+                        onValueChange={setSortCriterion}
+                      >
+                        <SelectTrigger id="sort-criterion" className="mt-1">
+                          <SelectValue placeholder="Sort articles" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="newest">Newest First</SelectItem>
+                          <SelectItem value="oldest">Oldest First</SelectItem>
+                          <SelectItem value="most-viewed">Most Viewed</SelectItem>
+                          <SelectItem value="alphabetical">Alphabetical</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
