@@ -25,55 +25,40 @@ export default function Home() {
     queryKey: ['/api/categories'],
   });
   
-  // Set up keyboard shortcut sequence for admin access
+  // Set up simple keyboard sequence for admin access - just type "admin" anywhere on the page
   useEffect(() => {
-    // For tracking sequence of keys pressed
-    const keySequence: string[] = [];
-    const targetSequence = ['a', 'd', 'm', 'i', 'n'];
+    let keys: string[] = [];
+    const adminCode = ['a', 'd', 'm', 'i', 'n'];
     
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Get the key pressed (case insensitive)
+      // Add the current key to our sequence
       const key = e.key.toLowerCase();
       
-      // If it's one of the modifier keys (Alt/Option or Meta/Command), ignore
+      // Skip if it's a modifier key
       if (key === 'alt' || key === 'meta' || key === 'shift' || key === 'control') {
         return;
       }
       
-      // Only process when Alt/Option is pressed (metaKey for Command on Mac)
-      if (e.altKey) {
-        // Add the current key to our sequence
-        keySequence.push(key);
-        
-        // Check if the sequence matches so far
-        let isValid = true;
-        for (let i = 0; i < keySequence.length; i++) {
-          if (keySequence[i] !== targetSequence[i]) {
-            isValid = false;
-            break;
-          }
-        }
-        
-        // If invalid sequence, reset
-        if (!isValid) {
-          keySequence.length = 0;
-          return;
-        }
-        
-        // If we've completed the sequence successfully
-        if (keySequence.length === targetSequence.length) {
-          e.preventDefault();
-          setLocation('/login');
-          keySequence.length = 0;
-        }
-      } else {
-        // Reset sequence if Alt/Option is not held down
-        keySequence.length = 0;
+      // Add key to sequence
+      keys.push(key);
+      
+      // Keep only the last 5 keys pressed
+      if (keys.length > adminCode.length) {
+        keys = keys.slice(keys.length - adminCode.length);
+      }
+      
+      // Check if the sequence matches the admin code
+      const match = keys.join('') === adminCode.join('');
+      
+      // If it's a match, navigate to the login page
+      if (match) {
+        e.preventDefault();
+        setLocation('/login');
+        keys = [];
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
-    
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
