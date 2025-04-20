@@ -37,7 +37,12 @@ export function calculateReadTime(content: string): number {
 }
 
 export function generateShareLinks(article: { title: string, slug: string }): Record<string, string> {
-  const url = encodeURIComponent(`${window.location.origin}/article/${article.slug}`);
+  // Create the full URL - use window.location if available, otherwise use a placeholder
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://yourbuzzfeed.replit.app';
+  const fullUrl = `${baseUrl}/article/${article.slug}`;
+  
+  // Encoded values for sharing
+  const url = encodeURIComponent(fullUrl);
   const title = encodeURIComponent(article.title);
   
   return {
@@ -45,7 +50,10 @@ export function generateShareLinks(article: { title: string, slug: string }): Re
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
     linkedin: `https://www.linkedin.com/shareArticle?mini=true&url=${url}&title=${title}`,
     pinterest: `https://pinterest.com/pin/create/button/?url=${url}&description=${title}`,
-    email: `mailto:?subject=${title}&body=${url}`
+    whatsapp: `https://wa.me/?text=${title}%20${url}`,
+    email: `mailto:?subject=${title}&body=Check out this article: ${url}`,
+    copyLink: fullUrl, // Non-encoded version for clipboard copy
+    instagram: `https://www.instagram.com/?url=${url}` // Instagram doesn't have a direct share URL, but we'll include it for completeness
   };
 }
 

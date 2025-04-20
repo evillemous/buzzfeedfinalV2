@@ -5,6 +5,7 @@ import AdPlacement from "@/components/ads/AdPlacement";
 import AdContentRenderer from "@/components/ads/AdContentRenderer";
 import Sidebar from "@/components/layout/Sidebar";
 import RelatedArticles from "@/components/articles/RelatedArticles";
+import { ShareButtons } from "@/components/ShareButtons";
 import { Article, Category, User } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -31,6 +32,22 @@ export default function ArticlePage() {
     enabled: !!article?.authorId,
   });
   
+  // Invoke the trackArticleShare function when an article is shared
+  useEffect(() => {
+    const handleSharedSuccess = () => {
+      if (article) {
+        trackArticleShare();
+      }
+    };
+
+    // Add event listener for our custom share event
+    window.addEventListener('article-shared', handleSharedSuccess);
+
+    return () => {
+      window.removeEventListener('article-shared', handleSharedSuccess);
+    };
+  }, [article]);
+  
   // Find category for the article
   const category = article?.categoryId && categories 
     ? categories.find(c => c.id === article.categoryId) 
@@ -44,24 +61,14 @@ export default function ArticlePage() {
   // Split content for "Continue Reading" feature
   const contentParts = article?.content ? splitContentIntoPages(article.content) : ['', ''];
   
-  // Handle sharing the article
-  const handleShare = async () => {
+  // Track when article is shared
+  const trackArticleShare = async () => {
     if (article) {
       try {
-        await apiRequest('POST', `/api/articles/${article.id}/share`, {});
-        // Show share dialog
-        if (navigator.share) {
-          await navigator.share({
-            title: article.title,
-            text: article.excerpt,
-            url: window.location.href,
-          });
-        } else {
-          // Fallback for browsers that don't support the Web Share API
-          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}&url=${encodeURIComponent(window.location.href)}`, '_blank');
-        }
+        // Track the share event in our analytics
+        await apiRequest(`/api/articles/${article.id}/share`, { method: 'POST' });
       } catch (error) {
-        console.error('Error sharing article:', error);
+        console.error('Error tracking article share:', error);
       }
     }
   };
@@ -111,8 +118,8 @@ export default function ArticlePage() {
                   <span 
                     className="px-2 py-1 text-xs font-['Inter'] rounded-sm"
                     style={{
-                      backgroundColor: category.bgColor,
-                      color: category.color
+                      backgroundColor: category.bgColor || "#f0f0f0",
+                      color: category.color || "#333333"
                     }}
                   >
                     {category.name}
@@ -131,16 +138,8 @@ export default function ArticlePage() {
                       {category?.name && `${category.name} Editor`} • {formattedDate} • {article.readTime} min read
                     </div>
                   </div>
-                  <div className="ml-auto flex space-x-3">
-                    <button onClick={handleShare} className="text-gray-500 hover:text-[#0066CC]">
-                      <i className="fas fa-share-alt text-lg"></i>
-                    </button>
-                    <a href="#" className="text-gray-500 hover:text-[#0066CC]">
-                      <i className="fab fa-facebook-square text-lg"></i>
-                    </a>
-                    <a href="#" className="text-gray-500 hover:text-[#0066CC]">
-                      <i className="fab fa-twitter-square text-lg"></i>
-                    </a>
+                  <div className="ml-auto">
+                    {article && <ShareButtons article={{ title: article.title, slug: article.slug }} compact={true} />}
                   </div>
                 </div>
                 
@@ -186,6 +185,21 @@ export default function ArticlePage() {
                       <AdContentRenderer content={contentParts[1]} />
                     </>
                   )}
+                  
+                  {/* Share Article Section */}
+                  <div className="mt-10 border-t border-gray-200 pt-6">
+                    <div className="text-center mb-4">
+                      <h3 className="text-xl font-bold mb-2">Did you enjoy this article?</h3>
+                      <p className="text-gray-600">Share it with your friends and followers!</p>
+                    </div>
+                    
+                    {article && (
+                      <ShareButtons 
+                        article={{ title: article.title, slug: article.slug }} 
+                        className="justify-center"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
