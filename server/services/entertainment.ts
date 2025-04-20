@@ -61,8 +61,12 @@ export async function generateEntertainmentArticle(): Promise<number | null> {
       category = await storage.getCategoryBySlug('celebrity');
     }
     
+    // Generate a better image search query based on article context
+    const imageKeywords = `entertainment ${topic} ${title.split(' ').slice(0, 3).join(' ')}`;
+    console.log(`Entertainment article image search using keywords: "${imageKeywords}"`);
+    
     // Get an image for the article
-    const image = await getRandomImage(title);
+    const image = await getRandomImage(imageKeywords);
     
     // Create slug
     const slug = slugify(title);
@@ -117,8 +121,12 @@ export async function generateEntertainmentListicle(): Promise<number | null> {
       category = await storage.getCategoryBySlug('celebrity');
     }
     
+    // Generate a better image search query based on article context
+    const imageKeywords = `entertainment ${topic.split(' ').slice(0, 3).join(' ')}`;
+    console.log(`Entertainment listicle image search using keywords: "${imageKeywords}"`);
+    
     // Get an image for the article
-    const image = await getRandomImage(title);
+    const image = await getRandomImage(imageKeywords);
     
     // Create slug
     const slug = slugify(title);

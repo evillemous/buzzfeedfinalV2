@@ -192,8 +192,12 @@ export async function scrapeAndGenerateNews(): Promise<number> {
           category = await storage.getCategoryBySlug('news');
         }
         
+        // Generate a better image search query based on article context
+        const imageKeywords = `${categoryName} ${title.split(' ').slice(0, 4).join(' ')}`;
+        console.log(`News article image search using keywords: "${imageKeywords}"`);
+        
         // Get an image for the article
-        const image = await getRandomImage(title);
+        const image = await getRandomImage(imageKeywords);
         
         // Create slug
         const slug = slugify(title);

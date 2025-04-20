@@ -498,9 +498,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.log('No category provided for this article');
           }
           
+          // Generate a better image search query based on article context
+          const imageKeywords = `${content.category} ${content.title.split(' ').slice(0, 4).join(' ')}`;
+          console.log(`Batch article image search using keywords: "${imageKeywords}"`);
+          
           // Get an image for the article
-          console.log(`Fetching image for: ${content.title}`);
-          const image = await getRandomImage(content.title);
+          const image = await getRandomImage(imageKeywords);
           
           // Create slug
           const slug = slugify(content.title);
