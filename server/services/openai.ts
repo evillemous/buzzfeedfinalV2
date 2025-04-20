@@ -220,15 +220,45 @@ export async function batchGenerateContent(
     const topicsContent = response.choices[0].message.content || '{"topics":[]}';
     console.log('Raw OpenAI response for topics:', topicsContent);
     
-    const topicsResult = JSON.parse(topicsContent);
-    console.log('Parsed topics result:', JSON.stringify(topicsResult));
+    // Fix potential JSON issues by ensuring we have a valid topics array
+    let topicsResult;
+    try {
+      topicsResult = JSON.parse(topicsContent);
+      console.log('Parsed topics result:', JSON.stringify(topicsResult));
+    } catch (parseError) {
+      console.error('Error parsing OpenAI response:', parseError);
+      console.log('Attempting to fix malformed JSON response...');
+      
+      // Try to extract an array from the response if it's not valid JSON
+      if (topicsContent.includes('"topic":') && topicsContent.includes('"category":')) {
+        try {
+          // If it looks like a single object without an array wrapper
+          if (topicsContent.trim().startsWith('{') && !topicsContent.includes('"topics":')) {
+            const singleTopic = JSON.parse(topicsContent);
+            topicsResult = { topics: [singleTopic] };
+            console.log('Fixed single topic response:', JSON.stringify(topicsResult));
+          } else {
+            // Try to create a simple wrapper if we have topic objects
+            topicsResult = { topics: [JSON.parse(topicsContent)] };
+            console.log('Created topics array from response:', JSON.stringify(topicsResult));
+          }
+        } catch (fallbackError) {
+          console.error('Failed to fix JSON response:', fallbackError);
+          topicsResult = { topics: [] };
+        }
+      } else {
+        topicsResult = { topics: [] };
+      }
+    }
     
-    const topics = topicsResult.topics || [];
+    // Extract topics, ensuring we always have an array
+    const topics = Array.isArray(topicsResult.topics) ? topicsResult.topics : 
+                  (topicsResult.topic ? [topicsResult] : []);
     console.log(`Got ${topics.length} topics from OpenAI`);
     
-    // For small testing, let's reduce the number of topics to 2
-    const limitedTopics = topics.slice(0, 2);
-    console.log('Working with limited topics for testing:', JSON.stringify(limitedTopics));
+    // For actual testing, let's reduce the number of topics to 2 or use all if less than 2
+    const limitedTopics = topics.length > 2 ? topics.slice(0, 2) : topics;
+    console.log('Working with topics for testing:', JSON.stringify(limitedTopics));
     
     // Generate content for each topic
     console.log('Generating content for each topic...');
