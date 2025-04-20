@@ -212,6 +212,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Simple test route for OpenAI connection
+  app.get('/api/ai/test-connection', async (req, res) => {
+    try {
+      // Simple test - just generate a single idea without requiring auth
+      const testIdea = await generateArticleIdeas("Technology", 1);
+      res.json({ 
+        success: true, 
+        message: "OpenAI connection is working correctly!",
+        sample: testIdea[0]
+      });
+    } catch (error) {
+      console.error('Error testing OpenAI connection:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to connect to OpenAI API', 
+        error: error.message
+      });
+    }
+  });
+  
   // Image Search Routes
   app.get('/api/images/search', isAdmin, async (req, res) => {
     try {
@@ -370,8 +390,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featuredImage: image?.urls.regular || '',
         categoryId,
         authorId: 1, // Default author (admin)
-        isPublished: true,
-        isFeatured: false,
+        published: true,
+        featured: false,
         contentType: 'listicle' as ContentType,
         readTime: Math.ceil(targetLength / 200) // Approximate read time
       };
@@ -443,8 +463,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             featuredImage: image?.urls.regular || '',
             categoryId,
             authorId: 1, // Default author (admin)
-            isPublished: true,
-            isFeatured: false,
+            published: true,
+            featured: false,
             contentType: content.contentType,
             readTime: content.contentType === 'listicle' 
               ? Math.ceil(content.content.length / 600) 
