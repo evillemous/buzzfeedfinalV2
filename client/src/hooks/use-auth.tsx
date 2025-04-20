@@ -60,13 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("/api/login", { 
+      // Using fetch directly instead of apiRequest to handle the response differently
+      const res = await fetch("/api/login", { 
         method: "POST",
         body: JSON.stringify(credentials),
         headers: {
           "Content-Type": "application/json"
-        }
+        },
+        credentials: "include"
       });
+      
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Login failed");
+      }
+      
       return await res.json();
     },
     onSuccess: (userData: User) => {
