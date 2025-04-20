@@ -67,5 +67,9 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start the news scraping scheduler
+    scheduleNewsScraping();
+    log('News scraping scheduler has been initialized');
   });
 })();
