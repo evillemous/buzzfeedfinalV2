@@ -1,41 +1,82 @@
 import { useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-import { Redirect, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { queryClient } from "@/lib/queryClient";
 
 export default function LoginPage() {
-  const { user, isLoading, loginMutation } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [_, navigate] = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage("");
+    setIsLoading(true);
     
     try {
-      await loginMutation.mutateAsync({ username, password });
-      console.log("Login successful");
+      console.log("Attempting login with:", username);
       
-      // Redirect to admin page
-      navigate("/admin");
+      // Step 1: Login
+      const response = await fetch("/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        let message = "Login failed";
+        try {
+          const errorData = await response.json();
+          message = errorData.error || message;
+        } catch {
+          const text = await response.text();
+          if (text) message = text;
+        }
+        throw new Error(message);
+      }
+      
+      const userData = await response.json();
+      console.log("Login successful:", userData);
+      
+      // Step 2: Verify that the session was created by querying /api/user
+      const userCheckResponse = await fetch("/api/user", {
+        credentials: "include",
+      });
+      
+      if (userCheckResponse.ok) {
+        const userCheck = await userCheckResponse.json();
+        console.log("Session verification successful:", userCheck);
+        
+        // Update query cache
+        queryClient.setQueryData(["/api/user"], userData);
+        
+        // Wait a moment to ensure everything is updated
+        setTimeout(() => {
+          // Redirect to admin page
+          window.location.href = "/admin";
+        }, 500);
+      } else {
+        console.error("Session verification failed");
+        throw new Error("Login successful but session verification failed");
+      }
       
     } catch (error: any) {
       console.error("Login error:", error);
       setErrorMessage(error.message || "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
   };
-
-  // Redirect if already logged in
-  if (user && !isLoading) {
-    return <Redirect to="/admin" />;
-  }
 
   return (
     <div className="container flex items-center justify-center min-h-screen py-12">
@@ -82,9 +123,9 @@ export default function LoginPage() {
             <Button
               type="submit"
               className="w-full"
-              disabled={loginMutation.isPending || isLoading}
+              disabled={isLoading}
             >
-              {loginMutation.isPending ? (
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Logging in...

@@ -1,4 +1,5 @@
-import { Switch, Route } from "wouter";
+import { useState, useEffect } from "react";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,6 +16,37 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 
 function Router() {
+  const [secretCode, setSecretCode] = useState("");
+  const [_, navigate] = useLocation();
+
+  useEffect(() => {
+    // Secret admin access by typing "admin" on any page
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (/[a-z]/.test(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        setSecretCode(prev => {
+          const newCode = prev + e.key;
+          
+          // Check if the code is "admin"
+          if (newCode === "admin") {
+            console.log("Secret admin mode activated");
+            navigate("/login");
+            return "";
+          }
+          
+          // Reset if code gets too long
+          if (newCode.length > 5) {
+            return "";
+          }
+          
+          return newCode;
+        });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [navigate]);
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F5F5F5]">
       <Header />

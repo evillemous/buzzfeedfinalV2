@@ -70,14 +70,15 @@ export function setupAuth(app: Express) {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'your-secret-key',
-      resave: false,
-      saveUninitialized: false,
+      resave: true,
+      saveUninitialized: true,
       store: sessionStore,
       cookie: {
         maxAge: 86400000, // 24 hours
         secure: false, // Set to false to fix login issues in production
         httpOnly: true,
         sameSite: 'lax',
+        path: '/',
       },
     })
   );
