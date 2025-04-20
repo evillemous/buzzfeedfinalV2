@@ -183,7 +183,10 @@ export async function batchGenerateContent(
   category?: string;
 }>> {
   try {
+    console.log(`OpenAI batchGenerateContent called with count=${count}, listiclePercentage=${listiclePercentage}`);
+    
     // Get topic suggestions for batch generation
+    console.log('Calling OpenAI to get topic suggestions');
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -215,23 +218,37 @@ export async function batchGenerateContent(
 
     // Parse the topics response
     const topicsContent = response.choices[0].message.content || '{"topics":[]}';
+    console.log('Raw OpenAI response for topics:', topicsContent);
+    
     const topicsResult = JSON.parse(topicsContent);
+    console.log('Parsed topics result:', JSON.stringify(topicsResult));
+    
     const topics = topicsResult.topics || [];
+    console.log(`Got ${topics.length} topics from OpenAI`);
+    
+    // For small testing, let's reduce the number of topics to 2
+    const limitedTopics = topics.slice(0, 2);
+    console.log('Working with limited topics for testing:', JSON.stringify(limitedTopics));
     
     // Generate content for each topic
+    console.log('Generating content for each topic...');
     const results = await Promise.all(
-      topics.map(async (topicInfo: { topic: string; category: string; contentType: ContentType }) => {
+      limitedTopics.map(async (topicInfo: { topic: string; category: string; contentType: ContentType }) => {
         try {
+          console.log(`Generating content for topic: "${topicInfo.topic}" (${topicInfo.contentType})`);
           let generatedContent;
           
           if (topicInfo.contentType === 'listicle') {
             // Random number of items between 7 and 15
             const numItems = Math.floor(Math.random() * 9) + 7;
+            console.log(`Generating listicle with ${numItems} items`);
             generatedContent = await generateListicleContent(topicInfo.topic, numItems);
           } else {
+            console.log('Generating regular article');
             generatedContent = await generateArticleContent(topicInfo.topic);
           }
           
+          console.log(`Successfully generated content for "${topicInfo.topic}"`);
           return {
             ...generatedContent,
             contentType: topicInfo.contentType,
@@ -245,7 +262,10 @@ export async function batchGenerateContent(
     );
     
     // Filter out any null results from failed generations
-    return results.filter(item => item !== null);
+    const filteredResults = results.filter(item => item !== null);
+    console.log(`Successfully generated ${filteredResults.length} content items out of ${limitedTopics.length} topics`);
+    
+    return filteredResults;
   } catch (error) {
     console.error('Error in batch content generation:', error);
     throw new Error('Failed to generate batch content');

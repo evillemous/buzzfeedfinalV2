@@ -13,11 +13,18 @@ const config = {
   }
 };
 
+// Get command line arguments or use defaults
+const args = process.argv.slice(2);
+const count = args[0] ? parseInt(args[0]) : 2;
+const listiclePercentage = args[1] ? parseInt(args[1]) : 50;
+
 // Payload data
 const payload = JSON.stringify({
-  count: 2,
-  listiclePercentage: 50
+  count,
+  listiclePercentage
 });
+
+console.log(`Generating ${count} articles (${listiclePercentage}% listicles)...`);
 
 // Use http for localhost, https for external URLs
 const client = config.host === 'localhost' ? http : https;

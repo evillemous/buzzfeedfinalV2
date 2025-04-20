@@ -447,11 +447,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { count, listiclePercentage } = req.body;
       
+      console.log(`Starting batch generation with count=${count} and listiclePercentage=${listiclePercentage}`);
+      
       // Generate batch content
       const batchContent = await batchGenerateContent(
         count || 10,
         listiclePercentage || 40
       );
+      
+      console.log(`Received ${batchContent.length} content items from OpenAI`);
       
       // Will store the created articles
       const createdArticles = [];
@@ -459,6 +463,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process each generated content to create articles
       for (const content of batchContent) {
         try {
+          console.log(`Processing article: "${content.title}" (${content.contentType})`);
+          
           // Find or create the category
           let categoryId: number | null = null;
           
@@ -468,6 +474,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             let category = await storage.getCategoryBySlug(categorySlug);
             
             if (!category) {
+              console.log(`Creating new category: ${content.category}`);
               // Create the category
               category = await storage.createCategory({
                 name: content.category,
@@ -476,18 +483,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 color: '#0066CC', // Default color
                 bgColor: '#E6F0FF' // Default background color
               });
+            } else {
+              console.log(`Using existing category: ${category.name} (id: ${category.id})`);
             }
             
             categoryId = category.id;
+          } else {
+            console.log('No category provided for this article');
           }
           
           // Get an image for the article
+          console.log(`Fetching image for: ${content.title}`);
           const image = await getRandomImage(content.title);
           
           // Create slug
           const slug = slugify(content.title);
           
           // Create the article
+          console.log('Preparing article data for database insertion');
           const articleData = {
             title: content.title,
             slug,
@@ -504,13 +517,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
               : Math.ceil(content.content.length / 400)
           };
           
+          console.log('Article data prepared:', JSON.stringify({
+            title: articleData.title,
+            slug: articleData.slug,
+            excerpt: articleData.excerpt.substring(0, 50) + '...',
+            categoryId: articleData.categoryId,
+            contentType: articleData.contentType
+          }));
+          
+          console.log('Calling storage.createArticle()');
           const article = await storage.createArticle(articleData);
+          console.log(`Article created successfully with ID: ${article.id}`);
+          
           createdArticles.push(article);
         } catch (error) {
           console.error(`Error creating article "${content.title}":`, error);
           // Continue with the next article even if this one fails
         }
       }
+      
+      console.log(`Batch generation complete. Created ${createdArticles.length} articles`);
       
       res.status(201).json({
         success: true,
