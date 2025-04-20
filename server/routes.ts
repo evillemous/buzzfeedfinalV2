@@ -19,10 +19,13 @@ import {
 } from "./services/entertainment";
 import { slugify } from "../client/src/lib/utils";
 
-// Import our authentication middleware
-import { isAuthenticated } from './auth';
+// Import our authentication system
+import { isAuthenticated, setupAuth } from './auth';
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication middleware and routes
+  setupAuth(app);
+  
   // API Routes
   
   // Categories

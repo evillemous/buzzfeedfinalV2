@@ -64,6 +64,9 @@ export function setupAuth(app: Express) {
 
   // Login route
   app.post('/api/login', async (req, res) => {
+    // Force content type to be JSON
+    res.setHeader('Content-Type', 'application/json');
+    
     try {
       const { username, password } = req.body;
       
@@ -88,7 +91,7 @@ export function setupAuth(app: Express) {
       
       // Return user without password
       const { password: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      return res.status(200).json(userWithoutPassword);
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ error: 'Internal server error' });
