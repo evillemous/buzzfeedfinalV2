@@ -156,7 +156,7 @@ export default function AdminDashboard() {
   // Create article mutation
   const createArticleMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/ai/create-article', {
+      return apiRequest<{ article: any, message: string }>('/api/ai/create-article', {
         method: 'POST',
         body: JSON.stringify({
           topic,
