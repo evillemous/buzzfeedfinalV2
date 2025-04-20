@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 10px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #response {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 15px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>API Test Form</h1>
+  
+  <div class="form-group">
+    <label for="endpoint">Endpoint:</label>
+    <select id="endpoint">
+      <option value="/api/ai/test-connection">Test OpenAI Connection</option>
+      <option value="/api/ai/create-test-article">Create Test Article</option>
+      <option value="/api/ai/batch-generate">Batch Generate Articles</option>
+    </select>
+  </div>
+  
+  <div class="form-group">
+    <label for="payload">Request Payload (JSON):</label>
+    <textarea id="payload" rows="6">{ "count": 3, "listiclePercentage": 30 }</textarea>
+  </div>
+  
+  <button id="sendRequest">Send Request</button>
+  
+  <div id="response">Response will appear here...</div>
+  
+  <script>
+    document.getElementById('sendRequest').addEventListener('click', async () => {
+      const endpoint = document.getElementById('endpoint').value;
+      const payload = document.getElementById('payload').value;
+      const responseElement = document.getElementById('response');
+      
+      try {
+        responseElement.textContent = 'Sending request...';
+        
+        const method = endpoint === '/api/ai/test-connection' ? 'GET' : 'POST';
+        const options = {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        };
+        
+        if (method === 'POST') {
+          options.body = payload;
+        }
+        
+        const response = await fetch(endpoint, options);
+        const data = await response.json();
+        
+        responseElement.textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        responseElement.textContent = `Error: ${error.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
