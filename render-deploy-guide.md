@@ -67,7 +67,7 @@ node render-fix.cjs
 Check if your database has content:
 
 ```
-node check-db-connection.js
+node check-db-connection.cjs
 ```
 
 If there are no articles, you'll need to generate some content or add categories.
