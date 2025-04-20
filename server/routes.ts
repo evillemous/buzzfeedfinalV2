@@ -208,6 +208,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to delete article' });
     }
   });
+  
+  // Bulk delete articles
+  app.post('/api/articles/bulk-delete', isAdmin, async (req, res) => {
+    try {
+      const { ids } = req.body;
+      
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'Invalid article IDs' });
+      }
+      
+      // Delete articles one by one
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          try {
+            await storage.deleteArticle(id);
+            return { id, success: true };
+          } catch (error) {
+            console.error(`Error deleting article ${id}:`, error);
+            return { id, success: false, error: 'Failed to delete' };
+          }
+        })
+      );
+      
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+      
+      res.json({ 
+        message: `Deleted ${successful} articles${failed > 0 ? `, failed to delete ${failed} articles` : ''}`,
+        successful,
+        failed,
+        results
+      });
+    } catch (error) {
+      console.error('Error in bulk delete:', error);
+      res.status(500).json({ message: 'Failed to perform bulk delete operation' });
+    }
+  });
 
   app.post('/api/admin/categories', async (req, res) => {
     try {
