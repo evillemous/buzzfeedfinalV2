@@ -244,8 +244,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featuredImage: "https://images.unsplash.com/photo-1682687982167-d7fb3ed8541d",
         categoryId: 1, // Health category
         authorId: 1, // Admin user
-        published: true,
-        featured: false,
+        isPublished: true,
+        isFeatured: false,
         contentType: 'article',
         readTime: 2
       });
@@ -345,8 +345,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featuredImage: image?.urls.regular || '',
         categoryId,
         authorId: 1, // Default author (admin)
-        published: true,
-        featured: false
+        isPublished: true,
+        isFeatured: false
       };
       
       // Save to database
@@ -423,8 +423,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         featuredImage: image?.urls.regular || '',
         categoryId,
         authorId: 1, // Default author (admin)
-        published: true,
-        featured: false,
+        isPublished: true,
+        isFeatured: false,
         contentType: 'listicle' as ContentType,
         readTime: Math.ceil(targetLength / 200) // Approximate read time
       };
@@ -496,8 +496,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             featuredImage: image?.urls.regular || '',
             categoryId,
             authorId: 1, // Default author (admin)
-            published: true,
-            featured: false,
+            isPublished: true,
+            isFeatured: false,
             contentType: content.contentType,
             readTime: content.contentType === 'listicle' 
               ? Math.ceil(content.content.length / 600) 
