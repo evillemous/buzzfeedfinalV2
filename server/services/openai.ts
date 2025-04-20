@@ -1,7 +1,9 @@
 import OpenAI from "openai";
 
 // Initialize OpenAI client with API key
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ 
+  apiKey: process.env.OPENAI_API_KEY || '' 
+});
 
 /**
  * Generate article content using OpenAI
@@ -40,12 +42,13 @@ export async function generateArticleContent(topic: string, targetLength: number
     });
 
     // Parse the JSON response
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content || '{}';
+    const result = JSON.parse(content);
     
     return {
-      title: result.title,
-      content: result.content,
-      excerpt: result.excerpt
+      title: result.title || 'Generated Article',
+      content: result.content || '<p>Content could not be generated</p>',
+      excerpt: result.excerpt || 'Generated excerpt'
     };
   } catch (error) {
     console.error('Error generating article content:', error);
@@ -83,7 +86,8 @@ export async function generateArticleIdeas(category: string, count: number = 5):
     });
 
     // Parse the JSON response
-    const result = JSON.parse(response.choices[0].message.content);
+    const content = response.choices[0].message.content || '{"ideas":[]}';
+    const result = JSON.parse(content);
     return result.ideas || [];
   } catch (error) {
     console.error('Error generating article ideas:', error);

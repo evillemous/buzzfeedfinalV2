@@ -1,8 +1,19 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 import { insertArticleSchema, insertCategorySchema } from "@shared/schema";
+import { generateArticleContent, generateArticleIdeas } from "./services/openai";
+import { searchUnsplashImages, getRandomImage } from "./services/unsplash";
+import { slugify } from "../client/src/lib/utils";
+
+// Middleware to check if user is admin (simplified for demo)
+const isAdmin = (req: Request, res: Response, next: Function) => {
+  // In a real app, you would check session/token
+  // For demo purposes, we'll just pass through
+  // TODO: Implement proper authentication
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API Routes
@@ -155,6 +166,140 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: 'Invalid category data', errors: error.errors });
       }
       res.status(500).json({ message: 'Failed to create category' });
+    }
+  });
+
+  // AI Content Generation Routes
+  app.post('/api/ai/generate-content', isAdmin, async (req, res) => {
+    try {
+      const { topic, targetLength } = req.body;
+      
+      if (!topic) {
+        return res.status(400).json({ message: 'Topic is required' });
+      }
+      
+      const articleContent = await generateArticleContent(
+        topic,
+        targetLength || 800
+      );
+      
+      res.json(articleContent);
+    } catch (error) {
+      console.error('Error generating content:', error);
+      res.status(500).json({ message: 'Failed to generate content' });
+    }
+  });
+
+  app.post('/api/ai/generate-ideas', isAdmin, async (req, res) => {
+    try {
+      const { category, count } = req.body;
+      
+      if (!category) {
+        return res.status(400).json({ message: 'Category is required' });
+      }
+      
+      const ideas = await generateArticleIdeas(category, count || 5);
+      res.json({ ideas });
+    } catch (error) {
+      console.error('Error generating ideas:', error);
+      res.status(500).json({ message: 'Failed to generate article ideas' });
+    }
+  });
+  
+  // Image Search Routes
+  app.get('/api/images/search', isAdmin, async (req, res) => {
+    try {
+      const { query, page, perPage } = req.query;
+      
+      if (!query) {
+        return res.status(400).json({ message: 'Search query is required' });
+      }
+      
+      const images = await searchUnsplashImages(
+        query as string,
+        page ? parseInt(page as string) : 1,
+        perPage ? parseInt(perPage as string) : 10
+      );
+      
+      res.json({ images });
+    } catch (error) {
+      console.error('Error searching images:', error);
+      res.status(500).json({ message: 'Failed to search for images' });
+    }
+  });
+  
+  app.get('/api/images/random', isAdmin, async (req, res) => {
+    try {
+      const { query } = req.query;
+      
+      if (!query) {
+        return res.status(400).json({ message: 'Search query is required' });
+      }
+      
+      const image = await getRandomImage(query as string);
+      
+      if (!image) {
+        return res.status(404).json({ message: 'No image found' });
+      }
+      
+      res.json({ image });
+    } catch (error) {
+      console.error('Error getting random image:', error);
+      res.status(500).json({ message: 'Failed to get random image' });
+    }
+  });
+  
+  // Create a complete article with AI content and image
+  app.post('/api/ai/create-article', isAdmin, async (req, res) => {
+    try {
+      const { 
+        topic, 
+        categoryId,
+        targetLength,
+        imageKeyword 
+      } = req.body;
+      
+      if (!topic || !categoryId) {
+        return res.status(400).json({ 
+          message: 'Topic and categoryId are required' 
+        });
+      }
+      
+      // Step 1: Generate article content
+      const generatedContent = await generateArticleContent(
+        topic,
+        targetLength || 800
+      );
+      
+      // Step 2: Get an image
+      const imageSearchTerm = imageKeyword || topic;
+      const image = await getRandomImage(imageSearchTerm);
+      
+      // Step 3: Create the article
+      const slug = slugify(generatedContent.title);
+      
+      const articleData = {
+        title: generatedContent.title,
+        slug,
+        content: generatedContent.content,
+        excerpt: generatedContent.excerpt,
+        featuredImage: image?.urls.regular || '',
+        categoryId,
+        authorId: 1, // Default author (admin)
+        published: true,
+        featured: false
+      };
+      
+      // Save to database
+      const article = await storage.createArticle(articleData);
+      
+      res.status(201).json({ 
+        article,
+        message: 'Article created successfully' 
+      });
+    } catch (error) {
+      console.error('Error creating article:', error);
+      res.status(500).json({ message: 'Failed to create article' });
     }
   });
 
