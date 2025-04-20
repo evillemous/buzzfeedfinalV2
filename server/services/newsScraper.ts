@@ -139,11 +139,7 @@ async function generateNewsArticle(headline: { title: string, url: string }): Pr
     Include potential implications and contextual background. Don't make up specific quotes 
     or statistics unless they are common knowledge.`;
     
-    const { title, content, excerpt } = await generateArticleContent(
-      prompt, 
-      800, 
-      `News article about: ${headline.title}`
-    );
+    const { title, content, excerpt } = await generateArticleContent(prompt, 800);
     
     return {
       title,

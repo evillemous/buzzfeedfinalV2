@@ -11,6 +11,12 @@ import {
   type ContentType
 } from "./services/openai";
 import { searchUnsplashImages, getRandomImage } from "./services/unsplash";
+import { scrapeAndGenerateNews, scheduleNewsScraping } from "./services/newsScraper";
+import { 
+  generateEntertainmentBatch, 
+  generateEntertainmentArticle, 
+  generateEntertainmentListicle 
+} from "./services/entertainment";
 import { slugify } from "../client/src/lib/utils";
 
 // Middleware to check if user is admin (simplified for demo)
@@ -546,6 +552,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error in batch content generation:', error);
       res.status(500).json({ message: 'Failed to generate batch content' });
+    }
+  });
+  
+  // News scraping endpoints
+  app.post('/api/news/scrape', isAdmin, async (req, res) => {
+    try {
+      console.log('Manual news scraping initiated');
+      const articlesCreated = await scrapeAndGenerateNews();
+      
+      res.status(201).json({
+        success: true,
+        count: articlesCreated,
+        message: `Successfully created ${articlesCreated} news articles`
+      });
+    } catch (error) {
+      console.error('Error in manual news scraping:', error);
+      res.status(500).json({ message: 'Failed to scrape and generate news articles' });
+    }
+  });
+  
+  // Entertainment content generation endpoints
+  app.post('/api/entertainment/generate', isAdmin, async (req, res) => {
+    try {
+      const { count, listiclePercentage } = req.body;
+      
+      console.log('Manual entertainment content generation initiated');
+      const articleIds = await generateEntertainmentBatch(
+        count || 5,
+        listiclePercentage || 60
+      );
+      
+      res.status(201).json({
+        success: true,
+        count: articleIds.length,
+        ids: articleIds,
+        message: `Successfully created ${articleIds.length} entertainment content pieces`
+      });
+    } catch (error) {
+      console.error('Error in entertainment content generation:', error);
+      res.status(500).json({ message: 'Failed to generate entertainment content' });
+    }
+  });
+  
+  app.post('/api/entertainment/generate-article', isAdmin, async (req, res) => {
+    try {
+      console.log('Generating single entertainment article');
+      const articleId = await generateEntertainmentArticle();
+      
+      if (!articleId) {
+        return res.status(500).json({ message: 'Failed to generate entertainment article' });
+      }
+      
+      res.status(201).json({
+        success: true,
+        articleId,
+        message: 'Successfully created entertainment article'
+      });
+    } catch (error) {
+      console.error('Error generating entertainment article:', error);
+      res.status(500).json({ message: 'Failed to generate entertainment article' });
+    }
+  });
+  
+  app.post('/api/entertainment/generate-listicle', isAdmin, async (req, res) => {
+    try {
+      console.log('Generating entertainment listicle');
+      const articleId = await generateEntertainmentListicle();
+      
+      if (!articleId) {
+        return res.status(500).json({ message: 'Failed to generate entertainment listicle' });
+      }
+      
+      res.status(201).json({
+        success: true,
+        articleId,
+        message: 'Successfully created entertainment listicle'
+      });
+    } catch (error) {
+      console.error('Error generating entertainment listicle:', error);
+      res.status(500).json({ message: 'Failed to generate entertainment listicle' });
     }
   });
 
