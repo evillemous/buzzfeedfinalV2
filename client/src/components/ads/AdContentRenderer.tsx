@@ -28,11 +28,13 @@ export default function AdContentRenderer({ content }: AdContentRendererProps) {
         
         {/* Insert ad after the segment (unless it's the last segment) */}
         {!isLastPart && (
-          <AdPlacement 
-            type="in-content"
-            className="w-full my-6"
-            label="ADVERTISEMENT"
-          />
+          <div className="ad-insertion-point">
+            <AdPlacement 
+              type="in-content"
+              className="w-full my-6"
+              label="ADVERTISEMENT"
+            />
+          </div>
         )}
       </React.Fragment>
     );

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Category } from "@shared/schema";
+import { Category, Article } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Card,
   CardContent,
@@ -45,6 +46,12 @@ export default function AdminDashboard() {
   const [batchGenerating, setBatchGenerating] = useState(false);
   const [batchResults, setBatchResults] = useState<{success: boolean; count: number; message: string} | null>(null);
   
+  // Content management states
+  const [selectedArticleId, setSelectedArticleId] = useState<number | null>(null);
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
   // Listicle states
   const [listicleNumItems, setListicleNumItems] = useState("10");
   
@@ -69,6 +76,67 @@ export default function AdminDashboard() {
   const { data: categories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
     refetchOnWindowFocus: false,
+  });
+  
+  // Fetch articles for content management
+  const { 
+    data: articles, 
+    isLoading: articlesLoading,
+    refetch: refetchArticles 
+  } = useQuery<Article[]>({
+    queryKey: ['/api/articles'],
+    refetchOnWindowFocus: false,
+  });
+  
+  // Delete article mutation
+  const deleteArticleMutation = useMutation({
+    mutationFn: async (articleId: number) => {
+      return apiRequest(`/api/articles/${articleId}`, {
+        method: 'DELETE',
+      });
+    },
+    onSuccess: () => {
+      // Refresh article list after deletion
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      toast({
+        title: "Article Deleted",
+        description: "The article has been deleted successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Deletion Failed",
+        description: "Failed to delete the article. Please try again.",
+      });
+    }
+  });
+  
+  // Update article mutation
+  const updateArticleMutation = useMutation({
+    mutationFn: async (article: Partial<Article> & { id: number }) => {
+      return apiRequest(`/api/articles/${article.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(article),
+      });
+    },
+    onSuccess: () => {
+      setIsEditing(false);
+      setEditingArticle(null);
+      // Refresh article list after update
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      toast({
+        title: "Article Updated",
+        description: "The article has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: "Failed to update the article. Please try again.",
+      });
+    }
   });
   
   // Generate content mutation
@@ -362,6 +430,37 @@ export default function AdminDashboard() {
     createArticleMutation.mutate();
   };
   
+  // Handle article editing
+  const handleEditArticle = (article: Article) => {
+    setEditingArticle(article);
+    setIsEditing(true);
+  };
+  
+  // Handle article delete confirmation
+  const handleDeleteArticle = (articleId: number) => {
+    deleteArticleMutation.mutate(articleId);
+  };
+  
+  // Handle article update submission
+  const handleUpdateArticle = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingArticle) {
+      updateArticleMutation.mutate(editingArticle);
+    }
+  };
+  
+  // Handle canceling edit mode
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditingArticle(null);
+  };
+  
+  // Filter articles by search term
+  const filteredArticles = articles?.filter(article => 
+    article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    article.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
@@ -370,11 +469,12 @@ export default function AdminDashboard() {
       </p>
       
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="generate">Article</TabsTrigger>
           <TabsTrigger value="listicle">Listicle</TabsTrigger>
           <TabsTrigger value="batch">Batch Generate</TabsTrigger>
           <TabsTrigger value="ideas">Ideas</TabsTrigger>
+          <TabsTrigger value="manage">Manage Content</TabsTrigger>
           <TabsTrigger value="preview" disabled={!previewContent}>
             Preview
           </TabsTrigger>
@@ -648,6 +748,204 @@ export default function AdminDashboard() {
                 {generateListicleMutation.isPending ? "Generating..." : "Generate Listicle"}
               </Button>
             </CardFooter>
+          </Card>
+        </TabsContent>
+        
+        {/* Content Management Tab */}
+        <TabsContent value="manage">
+          <Card>
+            <CardHeader>
+              <CardTitle>Content Management</CardTitle>
+              <CardDescription>
+                Manage, edit, and delete your existing content.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isEditing && editingArticle ? (
+                // Edit Article Form
+                <form onSubmit={handleUpdateArticle} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-title">Title</Label>
+                    <Input
+                      id="edit-title"
+                      value={editingArticle.title}
+                      onChange={(e) => setEditingArticle({...editingArticle, title: e.target.value})}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-excerpt">Excerpt</Label>
+                    <Textarea
+                      id="edit-excerpt"
+                      value={editingArticle.excerpt}
+                      onChange={(e) => setEditingArticle({...editingArticle, excerpt: e.target.value})}
+                      rows={3}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-category">Category</Label>
+                    <Select
+                      value={editingArticle.categoryId?.toString() || ""}
+                      onValueChange={(value) => setEditingArticle({...editingArticle, categoryId: parseInt(value)})}
+                      required
+                    >
+                      <SelectTrigger id="edit-category">
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories?.map((category) => (
+                          <SelectItem 
+                            key={category.id} 
+                            value={category.id.toString()}
+                          >
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-featured-image">Featured Image URL</Label>
+                    <Input
+                      id="edit-featured-image"
+                      value={editingArticle.featuredImage || ""}
+                      onChange={(e) => setEditingArticle({...editingArticle, featuredImage: e.target.value})}
+                    />
+                    {editingArticle.featuredImage && (
+                      <div className="mt-2">
+                        <img 
+                          src={editingArticle.featuredImage} 
+                          alt="Featured" 
+                          className="h-24 object-cover rounded-md"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-content">Content</Label>
+                    <Textarea
+                      id="edit-content"
+                      value={editingArticle.content}
+                      onChange={(e) => setEditingArticle({...editingArticle, content: e.target.value})}
+                      rows={10}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="flex space-x-2 justify-end pt-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={handleCancelEdit}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit"
+                      disabled={updateArticleMutation.isPending}
+                    >
+                      {updateArticleMutation.isPending ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                // Article List
+                <>
+                  <div className="mb-4">
+                    <Label htmlFor="search">Search Articles</Label>
+                    <Input
+                      id="search"
+                      placeholder="Search by title or content..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  
+                  {articlesLoading ? (
+                    <div className="py-8 flex justify-center">
+                      <p>Loading articles...</p>
+                    </div>
+                  ) : filteredArticles && filteredArticles.length > 0 ? (
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead className="hidden md:table-cell">Views</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredArticles.map((article) => {
+                            const category = categories?.find(c => c.id === article.categoryId);
+                            
+                            return (
+                              <TableRow key={article.id}>
+                                <TableCell className="font-medium">
+                                  <div className="truncate max-w-[200px]">{article.title}</div>
+                                  <div className="text-xs text-gray-500 truncate max-w-[200px]">{article.excerpt}</div>
+                                </TableCell>
+                                <TableCell>{category?.name || "Uncategorized"}</TableCell>
+                                <TableCell className="hidden md:table-cell">{article.views || 0}</TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end space-x-2">
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => handleEditArticle(article)}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button 
+                                          variant="destructive" 
+                                          size="sm"
+                                        >
+                                          Delete
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will permanently delete "{article.title}". This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction 
+                                            onClick={() => handleDeleteArticle(article.id)}
+                                            className="bg-red-500 hover:bg-red-600"
+                                          >
+                                            Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center">
+                      <p>No articles found. Try a different search term or create new content.</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </CardContent>
           </Card>
         </TabsContent>
         
