@@ -54,6 +54,8 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
   const [sortCriterion, setSortCriterion] = useState<string>("newest");
+  const [selectedArticles, setSelectedArticles] = useState<number[]>([]);
+  const [bulkActionOpen, setBulkActionOpen] = useState(false);
   
   // Listicle states
   const [listicleNumItems, setListicleNumItems] = useState("10");
@@ -138,6 +140,33 @@ export default function AdminDashboard() {
         variant: "destructive",
         title: "Update Failed",
         description: "Failed to update the article. Please try again.",
+      });
+    }
+  });
+  
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (articleIds: number[]) => {
+      return apiRequest('/api/articles/bulk-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids: articleIds }),
+      });
+    },
+    onSuccess: (_, variables) => {
+      // Refresh article list after bulk deletion
+      queryClient.invalidateQueries({ queryKey: ['/api/articles'] });
+      setSelectedArticles([]);
+      setBulkActionOpen(false);
+      toast({
+        title: "Articles Deleted",
+        description: `Successfully deleted ${variables.length} article(s).`,
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Bulk Deletion Failed",
+        description: "Failed to delete the selected articles. Please try again.",
       });
     }
   });
@@ -456,6 +485,37 @@ export default function AdminDashboard() {
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditingArticle(null);
+  };
+  
+  // Handle bulk delete action
+  const handleBulkDelete = () => {
+    if (selectedArticles.length > 0) {
+      bulkDeleteMutation.mutate(selectedArticles);
+    }
+  };
+  
+  // Handle select all articles
+  const handleSelectAll = () => {
+    if (filteredArticles && filteredArticles.length > 0) {
+      if (selectedArticles.length === filteredArticles.length) {
+        // If all are selected, deselect all
+        setSelectedArticles([]);
+      } else {
+        // Otherwise select all
+        setSelectedArticles(filteredArticles.map(article => article.id));
+      }
+    }
+  };
+  
+  // Handle individual article selection
+  const handleSelectArticle = (articleId: number) => {
+    if (selectedArticles.includes(articleId)) {
+      // If already selected, remove it
+      setSelectedArticles(selectedArticles.filter(id => id !== articleId));
+    } else {
+      // Otherwise add it
+      setSelectedArticles([...selectedArticles, articleId]);
+    }
   };
   
   // Filter articles by search term and content type
@@ -959,6 +1019,59 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   
+                  {/* Bulk Actions Bar */}
+                  {filteredArticles && filteredArticles.length > 0 && (
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center">
+                        <Checkbox 
+                          id="select-all" 
+                          checked={selectedArticles.length > 0 && selectedArticles.length === filteredArticles.length}
+                          onCheckedChange={handleSelectAll}
+                          className="mr-2"
+                        />
+                        <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                          {selectedArticles.length === 0 
+                            ? "Select All" 
+                            : `Selected ${selectedArticles.length} ${selectedArticles.length === 1 ? 'article' : 'articles'}`}
+                        </Label>
+                      </div>
+                      
+                      {selectedArticles.length > 0 && (
+                        <div className="flex gap-2">
+                          <AlertDialog open={bulkActionOpen} onOpenChange={setBulkActionOpen}>
+                            <AlertDialogTrigger asChild>
+                              <Button 
+                                variant="destructive"
+                                size="sm"
+                                className="text-xs"
+                              >
+                                Delete Selected
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Confirm Bulk Delete</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  You are about to delete {selectedArticles.length} {selectedArticles.length === 1 ? 'article' : 'articles'}. 
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={handleBulkDelete}
+                                  className="bg-red-500 hover:bg-red-600"
+                                >
+                                  Delete {selectedArticles.length} {selectedArticles.length === 1 ? 'Article' : 'Articles'}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {articlesLoading ? (
                     <div className="py-8 flex justify-center">
                       <p>Loading articles...</p>
@@ -968,6 +1081,13 @@ export default function AdminDashboard() {
                       <Table>
                         <TableHeader>
                           <TableRow>
+                            <TableHead className="w-[50px]">
+                              <Checkbox 
+                                checked={selectedArticles.length > 0 && selectedArticles.length === filteredArticles.length}
+                                onCheckedChange={handleSelectAll}
+                                aria-label="Select all"
+                              />
+                            </TableHead>
                             <TableHead>Title</TableHead>
                             <TableHead>Category</TableHead>
                             <TableHead className="hidden md:table-cell">Type</TableHead>
@@ -981,6 +1101,13 @@ export default function AdminDashboard() {
                             
                             return (
                               <TableRow key={article.id}>
+                                <TableCell>
+                                  <Checkbox 
+                                    checked={selectedArticles.includes(article.id)}
+                                    onCheckedChange={() => handleSelectArticle(article.id)}
+                                    aria-label={`Select ${article.title}`}
+                                  />
+                                </TableCell>
                                 <TableCell className="font-medium">
                                   <div className="truncate max-w-[200px]">{article.title}</div>
                                   <div className="text-xs text-gray-500 truncate max-w-[200px]">{article.excerpt}</div>
@@ -998,6 +1125,13 @@ export default function AdminDashboard() {
                                 <TableCell className="hidden md:table-cell">{article.views || 0}</TableCell>
                                 <TableCell className="text-right">
                                   <div className="flex justify-end space-x-2">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => window.open(`/article/${article.slug}`, '_blank')}
+                                    >
+                                      View
+                                    </Button>
                                     <Button 
                                       variant="outline" 
                                       size="sm"
