@@ -9,7 +9,7 @@ This guide will help you fix deployment issues on Render.com.
 Go to your Render.com dashboard, select your web service, and change the build command to:
 
 ```
-node render-build.js
+node render-build.cjs
 ```
 
 Instead of the default `npm install && npm run build`.
@@ -29,7 +29,7 @@ Make sure you have these environment variables set in Render:
 After deployment, open the Render shell and run:
 
 ```
-node render-debug.js
+node render-debug.cjs
 ```
 
 This will diagnose issues with your database and fix them automatically.
@@ -39,7 +39,7 @@ This will diagnose issues with your database and fix them automatically.
 If you're still having login issues, run:
 
 ```
-node setup-admin-render.js
+node setup-admin-render.cjs
 ```
 
 This will recreate the admin user with username `admin` and password `admin123`.
@@ -49,7 +49,7 @@ This will recreate the admin user with username `admin` and password `admin123`.
 For detailed information about your database:
 
 ```
-node check-db-connection.js
+node check-db-connection.cjs
 ```
 
 ## Common Issues
@@ -59,7 +59,7 @@ node check-db-connection.js
 This is usually due to session configuration issues. Run:
 
 ```
-node render-fix.js
+node render-fix.cjs
 ```
 
 ### 2. No Content on Home Page
