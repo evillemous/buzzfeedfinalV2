@@ -41,7 +41,7 @@ export default function LoginPage() {
       // Redirect to admin page
       navigate("/admin");
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
       setErrorMessage(error.message || "Login failed. Please try again.");
     }

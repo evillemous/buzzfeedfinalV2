@@ -5,114 +5,76 @@ async function checkConnection() {
     console.error('DATABASE_URL environment variable is not set');
     return;
   }
-  
-  // Print a sanitized version of the connection string (hiding credentials)
-  const connString = process.env.DATABASE_URL;
-  const sanitizedConnString = connString.replace(/:\/\/([^:]+):([^@]+)@/, '://*****:*****@');
-  console.log('Using connection string:', sanitizedConnString);
-  
+
   const pool = new Pool({ connectionString: process.env.DATABASE_URL });
   
   try {
-    console.log('Attempting to connect to database...');
-    const result = await pool.query('SELECT NOW()');
-    console.log('Connection successful:', result.rows[0]);
+    console.log('Testing database connection...');
+    const result = await pool.query('SELECT NOW() as current_time');
+    console.log('Connection successful:', result.rows[0].current_time);
     
-    // Create tables manually
-    console.log('Creating tables manually...');
+    // Test getting users
+    console.log('\nChecking users table:');
+    const usersResult = await pool.query('SELECT * FROM users');
+    console.log(`Found ${usersResult.rows.length} user(s)`);
     
-    try {
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS users (
-          id SERIAL PRIMARY KEY,
-          username TEXT NOT NULL UNIQUE,
-          password TEXT NOT NULL,
-          email TEXT NOT NULL,
-          role TEXT NOT NULL DEFAULT 'user'
-        )
-      `);
-      console.log('Users table created or verified');
-      
-      // Create admin user
-      const checkAdmin = await pool.query('SELECT * FROM users WHERE username = $1', ['admin']);
-      if (checkAdmin.rows.length === 0) {
-        // Create a simple hashed password for now
-        const crypto = require('crypto');
-        const salt = crypto.randomBytes(16).toString('hex');
-        const hash = crypto.scryptSync('admin123', salt, 64).toString('hex');
-        const hashedPassword = `${hash}.${salt}`;
-        
-        await pool.query(
-          'INSERT INTO users (username, password, email, role) VALUES ($1, $2, $3, $4)',
-          ['admin', hashedPassword, 'admin@example.com', 'admin']
-        );
-        console.log('Admin user created');
+    if (usersResult.rows.length > 0) {
+      const adminUser = usersResult.rows.find(user => user.username === 'admin');
+      if (adminUser) {
+        console.log('Admin user found with id:', adminUser.id);
       } else {
-        console.log('Admin user already exists');
+        console.log('No admin user found');
       }
+    }
+    
+    // Check table schema
+    console.log('\nChecking table schema:');
+    const tablesResult = await pool.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `);
+    
+    console.log('Tables in database:');
+    for (const row of tablesResult.rows) {
+      console.log(`- ${row.table_name}`);
       
-      // Create other required tables
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS categories (
-          id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL,
-          slug TEXT NOT NULL UNIQUE,
-          description TEXT
-        )
-      `);
-      console.log('Categories table created or verified');
+      // Get columns for this table
+      const columnsResult = await pool.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = $1
+      `, [row.table_name]);
       
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS articles (
-          id SERIAL PRIMARY KEY,
-          title TEXT NOT NULL,
-          slug TEXT NOT NULL UNIQUE,
-          content TEXT NOT NULL,
-          image_url TEXT,
-          category_id INTEGER REFERENCES categories(id),
-          is_featured BOOLEAN DEFAULT false,
-          views INTEGER DEFAULT 0,
-          shares INTEGER DEFAULT 0,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      console.log('Articles table created or verified');
-      
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS tags (
-          id SERIAL PRIMARY KEY,
-          name TEXT NOT NULL,
-          slug TEXT NOT NULL UNIQUE
-        )
-      `);
-      console.log('Tags table created or verified');
-      
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS articles_tags (
-          id SERIAL PRIMARY KEY,
-          article_id INTEGER REFERENCES articles(id) ON DELETE CASCADE,
-          tag_id INTEGER REFERENCES tags(id) ON DELETE CASCADE,
-          UNIQUE(article_id, tag_id)
-        )
-      `);
-      console.log('Articles_tags table created or verified');
-      
-      // Add default category if none exists
-      const checkCategory = await pool.query('SELECT * FROM categories LIMIT 1');
-      if (checkCategory.rows.length === 0) {
-        await pool.query(
-          'INSERT INTO categories (name, slug, description) VALUES ($1, $2, $3)',
-          ['News', 'news', 'Latest news and updates']
-        );
-        console.log('Default category created');
+      console.log('  Columns:');
+      for (const col of columnsResult.rows) {
+        console.log(`  - ${col.column_name} (${col.data_type})`);
       }
-      
-    } catch (err) {
-      console.error('Error creating tables:', err);
+    }
+    
+    // Test getting categories
+    console.log('\nChecking categories:');
+    const catResult = await pool.query('SELECT * FROM categories');
+    console.log(`Found ${catResult.rows.length} categories`);
+    if (catResult.rows.length > 0) {
+      console.log('Categories:', catResult.rows.map(c => c.name).join(', '));
+    }
+    
+    // Test getting articles
+    console.log('\nChecking articles:');
+    const articlesResult = await pool.query('SELECT COUNT(*) FROM articles');
+    console.log(`Total articles: ${articlesResult.rows[0].count}`);
+    
+    if (parseInt(articlesResult.rows[0].count) > 0) {
+      const recentArticles = await pool.query('SELECT id, title, slug FROM articles ORDER BY id DESC LIMIT 3');
+      console.log('Latest articles:');
+      recentArticles.rows.forEach(article => {
+        console.log(`- ${article.title} (ID: ${article.id}, Slug: ${article.slug})`);
+      });
     }
     
   } catch (error) {
-    console.error('Connection error:', error);
+    console.error('Error:', error);
   } finally {
     await pool.end();
   }
