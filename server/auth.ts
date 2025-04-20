@@ -75,7 +75,8 @@ export function setupAuth(app: Express) {
       store: sessionStore,
       cookie: {
         maxAge: 86400000, // 24 hours
-        secure: process.env.NODE_ENV === 'production',
+        secure: false, // Set to false to fix login issues in production
+        httpOnly: true,
         sameSite: 'lax',
       },
     })
@@ -93,24 +94,40 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: 'Username and password are required' });
       }
 
+      // Log debugging information
+      console.log(`Login attempt for username: ${username}`);
+      
       const user = await storage.getUserByUsername(username);
       
       if (!user) {
+        console.log(`User not found: ${username}`);
         return res.status(401).json({ error: 'Invalid username or password' });
       }
 
+      console.log(`User found, verifying password for ${username}`);
       const passwordValid = await verifyPassword(password, user.password);
       
       if (!passwordValid) {
+        console.log(`Invalid password for ${username}`);
         return res.status(401).json({ error: 'Invalid username or password' });
       }
 
-      // Set user ID in session
+      // Password is valid, set session
+      console.log(`Password valid for ${username}, setting session`);
       req.session.userId = user.id;
       
-      // Return user without password
-      const { password: _, ...userWithoutPassword } = user;
-      return res.status(200).json(userWithoutPassword);
+      // Explicitly save the session to ensure it's stored
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Failed to create session' });
+        }
+        
+        // Return user without password
+        const { password: _, ...userWithoutPassword } = user;
+        console.log(`Login successful for ${username}`);
+        return res.status(200).json(userWithoutPassword);
+      });
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ error: 'Internal server error' });
