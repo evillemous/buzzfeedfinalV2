@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface AdPlacementProps {
   type: 'banner' | 'sidebar' | 'in-content' | 'mobile-anchor';
@@ -7,27 +7,77 @@ interface AdPlacementProps {
 }
 
 export default function AdPlacement({ type, className = '', label = 'ADVERTISEMENT' }: AdPlacementProps) {
-  const [adCode, setAdCode] = useState<string | null>(null);
+  const adRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    // In a real implementation, this would load actual ad code
-    // from an ad network like Google AdSense
-    const loadAd = () => {
-      const adScriptId = `ad-script-${Math.random().toString(36).substring(2, 9)}`;
-      
-      // For a real implementation, this would be AdSense code
-      // This is just a placeholder for the demo
-      setAdCode(`
-        <!-- Ad Container ${type} -->
-        <div id="${adScriptId}"></div>
-      `);
+    // This function loads and initializes AdSense ads
+    const loadAdSense = () => {
+      try {
+        // Check if AdSense script is loaded
+        if (typeof (window as any).adsbygoogle !== 'undefined') {
+          // Get appropriate ad size based on ad type
+          let adSize: string;
+          let adFormat: string = 'auto';
+          
+          switch (type) {
+            case 'banner':
+              adSize = 'horizontal';
+              break;
+            case 'sidebar':
+              adSize = 'rectangle';
+              break;
+            case 'in-content':
+              adSize = 'fluid';
+              break;
+            case 'mobile-anchor':
+              adSize = 'horizontal';
+              adFormat = 'autorelaxed';
+              break;
+            default:
+              adSize = 'auto';
+          }
+          
+          // Create the ins element for AdSense
+          const adElement = document.createElement('ins');
+          adElement.className = 'adsbygoogle';
+          adElement.style.display = 'block';
+          adElement.style.textAlign = 'center';
+          adElement.setAttribute('data-ad-client', 'ca-pub-8333936306401310');
+          adElement.setAttribute('data-ad-slot', '');  // Your specific ad slot ID would go here
+          adElement.setAttribute('data-ad-format', adFormat);
+          adElement.setAttribute('data-full-width-responsive', 'true');
+          
+          // Clear and append the ad element
+          if (adRef.current) {
+            adRef.current.innerHTML = '';
+            adRef.current.appendChild(adElement);
+            
+            // Push command to AdSense to display ads
+            try {
+              ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+            } catch (pushError) {
+              console.error('Error pushing adsbygoogle command:', pushError);
+            }
+          }
+        } else {
+          console.log('AdSense not loaded yet. Waiting for script to load...');
+          
+          // Try again after a short delay
+          setTimeout(loadAdSense, 1000);
+        }
+      } catch (error) {
+        console.error('Error loading AdSense ad:', error);
+      }
     };
     
-    loadAd();
+    // Load AdSense ads
+    loadAdSense();
     
-    // Clean up function
+    // Clean up on component unmount
     return () => {
-      // Remove ad scripts, etc.
+      if (adRef.current) {
+        adRef.current.innerHTML = '';
+      }
     };
   }, [type]);
   
@@ -41,17 +91,8 @@ export default function AdPlacement({ type, className = '', label = 'ADVERTISEME
           {type === 'in-content' && 'In-content advertisement'}
           {type === 'mobile-anchor' && 'Mobile anchor advertisement'}
         </div>
-        {adCode && <div dangerouslySetInnerHTML={{ __html: adCode }} />}
+        <div ref={adRef} className="adsense-container my-2"></div>
       </div>
-      
-      {/* This script tag would be replaced with actual AdSense code */}
-      {/* The following is for demonstration purposes only */}
-      <script dangerouslySetInnerHTML={{ 
-        __html: `
-          // This would be replaced with actual AdSense initialization code
-          console.log('Ad placement rendered: ${type}');
-        `
-      }} />
     </div>
   );
 }
