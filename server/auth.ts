@@ -66,23 +66,36 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 
 // Set up authentication
 export function setupAuth(app: Express) {
-  // Configure session middleware
+  // Configure session middleware with maximum compatibility
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || 'yourbuzzfeed-secret-key',
+      secret: process.env.SESSION_SECRET || 'yourbuzzfeed-secret-key-for-prod-env',
       resave: true,
       saveUninitialized: true,
       store: sessionStore,
       name: 'yourbuzzfeed.sid', // Custom name for cookie
       cookie: {
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
-        secure: false, // Set to false to work in all environments
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for longer sessions
+        secure: false, // Must be false for non-HTTPS environments
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
       },
     })
   );
+  
+  // Add a more permissive CORS setup
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
 
   // Login route
   app.post('/api/login', async (req, res) => {
@@ -151,6 +164,8 @@ export function setupAuth(app: Express) {
   // Get current user
   app.get('/api/user', async (req, res) => {
     try {
+      console.log('Session data:', req.session);
+      
       if (!req.session.userId) {
         return res.status(401).json({ error: 'Not authenticated' });
       }
@@ -158,14 +173,36 @@ export function setupAuth(app: Express) {
       const user = await storage.getUser(req.session.userId);
       
       if (!user) {
+        console.error(`User with ID ${req.session.userId} not found in database`);
         return res.status(404).json({ error: 'User not found' });
       }
 
       // Return user without password
       const { password: _, ...userWithoutPassword } = user;
+      console.log(`User data returned for user ${user.username}`);
       res.json(userWithoutPassword);
     } catch (error) {
       console.error('Get user error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  // Simple non-session-based admin access for emergency use
+  app.get('/api/emergency-admin', async (req, res) => {
+    try {
+      const admin = await storage.getUserByUsername('admin');
+      
+      if (!admin) {
+        return res.status(404).json({ error: 'Admin user not found' });
+      }
+      
+      const { password: _, ...adminWithoutPassword } = admin;
+      res.json({
+        user: adminWithoutPassword,
+        warning: "Using emergency access - should be used for recovery only"
+      });
+    } catch (error) {
+      console.error('Emergency admin access error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

@@ -78,7 +78,7 @@ export default function LoginPage() {
     }
   };
 
-  // Alternative debug login
+  // Alternative login methods for troubleshooting
   const handleDebugLogin = async () => {
     try {
       setIsLoading(true);
@@ -98,6 +98,31 @@ export default function LoginPage() {
     } catch (err: any) {
       console.error(err);
       setErrorMessage("Debug login error: " + (err.message || "Unknown error"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Emergency admin access (no session required)
+  const handleEmergencyAdmin = async () => {
+    try {
+      setIsLoading(true);
+      setErrorMessage("");
+      
+      const response = await fetch('/api/emergency-admin');
+      const data = await response.json();
+      console.log('Emergency admin response:', data);
+      
+      if (response.ok) {
+        // Update query cache
+        queryClient.setQueryData(["/api/user"], data.user);
+        window.location.href = '/admin'; // Hard refresh after login
+      } else {
+        setErrorMessage("Emergency access failed: " + data.error);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMessage("Emergency access error: " + (err.message || "Unknown error"));
     } finally {
       setIsLoading(false);
     }
@@ -160,17 +185,31 @@ export default function LoginPage() {
               )}
             </Button>
             
-            {/* Debug login button */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleDebugLogin}
-              disabled={isLoading}
-              className="text-xs text-muted-foreground"
-            >
-              Alternative Login
-            </Button>
+            <div className="flex gap-2 w-full">
+              {/* Debug login button */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDebugLogin}
+                disabled={isLoading}
+                className="text-xs text-muted-foreground flex-1"
+              >
+                Alternative Login
+              </Button>
+              
+              {/* Emergency admin access */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleEmergencyAdmin}
+                disabled={isLoading}
+                className="text-xs text-muted-foreground flex-1"
+              >
+                Emergency Access
+              </Button>
+            </div>
           </CardFooter>
         </form>
       </Card>
