@@ -10,15 +10,16 @@ async function throwIfResNotOk(res: Response) {
 export async function apiRequest<T = any>(
   url: string,
   options?: RequestInit,
-): Promise<T> {
+): Promise<Response> {
   const res = await fetch(url, {
     ...options,
     headers: options?.body ? { "Content-Type": "application/json", ...options.headers } : options?.headers || {},
     credentials: "include",
   });
 
-  await throwIfResNotOk(res);
-  return await res.json();
+  // Don't throw the error automatically, just return the response
+  // This allows more granular error handling in the calling code
+  return res;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";

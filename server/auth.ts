@@ -143,7 +143,7 @@ export function setupAuth(app: Express) {
         console.error('Logout error:', err);
         return res.status(500).json({ error: 'Failed to logout' });
       }
-      res.clearCookie('connect.sid');
+      res.clearCookie('yourbuzzfeed.sid'); // Match the cookie name
       res.json({ success: true });
     });
   });
