@@ -18,7 +18,12 @@ export default function ArticleCard({ article, category }: ArticleCardProps) {
       <Link href={`/article/${article.slug}`}>
         <img 
           src={article.featuredImage || 'https://via.placeholder.com/600x400'} 
-          alt={article.title} 
+          alt={article.title}
+          onError={(e) => {
+            // If image fails to load, use a fallback
+            e.currentTarget.onerror = null; // Prevent infinite loops
+            e.currentTarget.src = 'https://via.placeholder.com/600x400?text=Image+Unavailable';
+          }} 
           className="w-full h-48 object-cover"
         />
         <div className="p-4">
@@ -26,8 +31,8 @@ export default function ArticleCard({ article, category }: ArticleCardProps) {
             <span 
               className="px-2 py-1 text-xs font-['Inter'] rounded-sm"
               style={{
-                backgroundColor: category.bgColor,
-                color: category.color
+                backgroundColor: category.bgColor || '#f0f0f0',
+                color: category.color || '#333333'
               }}
             >
               {category.name}

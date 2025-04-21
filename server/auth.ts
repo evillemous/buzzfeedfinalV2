@@ -74,9 +74,11 @@ export function setupAuth(app: Express) {
       saveUninitialized: false,
       store: sessionStore,
       cookie: {
-        maxAge: 86400000, // 24 hours
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        httpOnly: true,
+        path: '/'
       },
     })
   );

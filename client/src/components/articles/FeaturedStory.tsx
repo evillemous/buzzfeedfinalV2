@@ -18,14 +18,19 @@ export default function FeaturedStory({ article, category }: FeaturedStoryProps)
       <div className="relative">
         <img 
           src={article.featuredImage || 'https://via.placeholder.com/1000x500'} 
-          alt={article.title} 
+          alt={article.title}
+          onError={(e) => {
+            // If image fails to load, use a fallback
+            e.currentTarget.onerror = null; // Prevent infinite loops
+            e.currentTarget.src = 'https://via.placeholder.com/1000x500?text=Featured+Image+Unavailable';
+          }}
           className="w-full h-64 md:h-80 object-cover"
         />
         <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/80 to-transparent p-4">
           {category && (
             <span 
               className="px-2 py-1 text-xs font-['Inter'] rounded-sm text-white"
-              style={{ backgroundColor: category.color }}
+              style={{ backgroundColor: category.color || '#0066CC' }}
             >
               {category.name}
             </span>
