@@ -69,13 +69,14 @@ export function setupAuth(app: Express) {
   // Configure session middleware
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || 'your-secret-key',
+      secret: process.env.SESSION_SECRET || 'yourbuzzfeed-secret-key',
       resave: true,
       saveUninitialized: true,
       store: sessionStore,
+      name: 'yourbuzzfeed.sid', // Custom name for cookie
       cookie: {
-        maxAge: 86400000, // 24 hours
-        secure: false, // Set to false to fix login issues in production
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 1 week
+        secure: false, // Set to false to work in all environments
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
