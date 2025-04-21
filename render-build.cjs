@@ -16,16 +16,34 @@ console.log(`Running on Render: ${isRender ? 'Yes' : 'No'}`);
 // Make sure all dependencies are installed
 console.log('\n1. Installing dependencies...');
 try {
+  // Set NODE_ENV to development for dependency installation
+  // This prevents issues with dev dependencies not being installed
+  console.log('Setting NODE_ENV=development for dependency installation');
+  process.env.NODE_ENV = 'development';
+  
   // First try with a clean install
-  execSync('npm ci', { stdio: 'inherit' });
-  console.log('✅ Dependencies installed successfully with npm ci');
-} catch (error) {
-  console.log('⚠️ npm ci failed, falling back to npm install');
   try {
-    execSync('npm install', { stdio: 'inherit' });
+    execSync('NODE_ENV=development npm ci', { stdio: 'inherit' });
+    console.log('✅ Dependencies installed successfully with npm ci');
+  } catch (ciError) {
+    console.log('⚠️ npm ci failed, falling back to npm install');
+    execSync('NODE_ENV=development npm install', { stdio: 'inherit' });
     console.log('✅ Dependencies installed successfully with npm install');
-  } catch (installError) {
-    console.error('❌ Failed to install dependencies:', installError);
+  }
+  
+  // Also install vital build dependencies explicitly
+  console.log('Installing build-critical dependencies...');
+  execSync('NODE_ENV=development npm install vite esbuild dotenv', { stdio: 'inherit' });
+  console.log('✅ Build tools installed successfully');
+} catch (error) {
+  console.error('❌ Failed to install dependencies:', error);
+  console.log('⚠️ Attempting emergency minimal install...');
+  
+  try {
+    execSync('npm install --no-package-lock --no-save vite @vitejs/plugin-react esbuild dotenv', { stdio: 'inherit' });
+    console.log('✅ Emergency minimal dependencies installed');
+  } catch (emergencyError) {
+    console.error('❌ All dependency installation attempts failed:', emergencyError);
     process.exit(1);
   }
 }
@@ -33,32 +51,39 @@ try {
 // Ensure vite plugins are installed
 console.log('\n2. Checking for Vite plugins...');
 try {
-  // Check for @vitejs/plugin-react
-  if (!fs.existsSync(path.join('node_modules', '@vitejs', 'plugin-react'))) {
-    console.log('⚠️ @vitejs/plugin-react not found, installing...');
-    execSync('npm install @vitejs/plugin-react', { stdio: 'inherit' });
-  } else {
-    console.log('✅ @vitejs/plugin-react is installed');
-  }
+  // Always install critical build dependencies explicitly
+  console.log('Installing critical Vite plugins...');
+  execSync('npm install @vitejs/plugin-react @tailwindcss/vite tailwindcss-animate @tailwindcss/typography', { stdio: 'inherit' });
+  console.log('✅ Core Vite plugins installed successfully');
   
   // Check for other plugins
   const requiredPlugins = [
     '@replit/vite-plugin-shadcn-theme-json',
     '@replit/vite-plugin-cartographer',
-    '@replit/vite-plugin-runtime-error-modal',
-    '@tailwindcss/vite'
+    '@replit/vite-plugin-runtime-error-modal'
   ];
   
   for (const plugin of requiredPlugins) {
-    const [scope, packageName] = plugin.split('/');
-    const pluginPath = path.join('node_modules', scope, packageName);
-    
-    if (!fs.existsSync(pluginPath)) {
-      console.log(`⚠️ ${plugin} not found, installing...`);
-      execSync(`npm install ${plugin}`, { stdio: 'inherit' });
-    } else {
-      console.log(`✅ ${plugin} is installed`);
+    try {
+      const [scope, packageName] = plugin.split('/');
+      const pluginPath = path.join('node_modules', scope, packageName);
+      
+      if (!fs.existsSync(pluginPath)) {
+        console.log(`⚠️ ${plugin} not found, installing...`);
+        execSync(`npm install ${plugin}`, { stdio: 'inherit' });
+      } else {
+        console.log(`✅ ${plugin} is installed`);
+      }
+    } catch (pluginError) {
+      console.log(`⚠️ Warning: Could not install ${plugin}: ${pluginError.message}`);
+      console.log('Continuing with build anyway...');
     }
+  }
+  
+  // Verify vital packages are installed
+  if (!fs.existsSync(path.join('node_modules', '@vitejs', 'plugin-react'))) {
+    console.log('⚠️ Critical dependency @vitejs/plugin-react still missing! Trying alternative installation...');
+    execSync('npm install @vitejs/plugin-react --no-save', { stdio: 'inherit' });
   }
 } catch (error) {
   console.error('❌ Failed to install Vite plugins:', error);
