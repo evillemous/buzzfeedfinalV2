@@ -10,16 +10,15 @@ async function throwIfResNotOk(res: Response) {
 export async function apiRequest<T = any>(
   url: string,
   options?: RequestInit,
-): Promise<Response> {
+): Promise<T> {
   const res = await fetch(url, {
     ...options,
     headers: options?.body ? { "Content-Type": "application/json", ...options.headers } : options?.headers || {},
     credentials: "include",
   });
 
-  // Don't throw the error automatically, just return the response
-  // This allows more granular error handling in the calling code
-  return res;
+  await throwIfResNotOk(res);
+  return await res.json();
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -28,41 +27,12 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const url = queryKey[0] as string;
-    console.log(`Fetching: ${url}`);
-    
-    const res = await fetch(url, {
+    const res = await fetch(queryKey[0] as string, {
       credentials: "include",
-      headers: {
-        'Accept': 'application/json'
-      }
     });
-    
-    console.log(`Response status for ${url}: ${res.status}`);
 
-    // Handle 401 errors with special case for user endpoint
-    if (res.status === 401) {
-      if (url === '/api/user') {
-        try {
-          console.log('Auth failed, trying emergency admin access...');
-          const emergencyRes = await fetch('/api/emergency-admin', {
-            credentials: 'include',
-            headers: { 'Accept': 'application/json' }
-          });
-          
-          if (emergencyRes.ok) {
-            const emergencyData = await emergencyRes.json();
-            console.log('Emergency access successful!');
-            return emergencyData.user;
-          }
-        } catch (emergencyErr) {
-          console.error('Emergency access failed:', emergencyErr);
-        }
-      }
-      
-      if (unauthorizedBehavior === "returnNull") {
-        return null;
-      }
+    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+      return null;
     }
 
     await throwIfResNotOk(res);
@@ -72,15 +42,11 @@ export const getQueryFn: <T>(options: {
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "returnNull" }),
+      queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,
-      retry: (failureCount, error: any) => {
-        // Don't retry on 401 errors
-        if (error?.status === 401) return false;
-        return failureCount < 3;
-      },
+      retry: false,
     },
     mutations: {
       retry: false,

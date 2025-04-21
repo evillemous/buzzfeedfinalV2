@@ -60,42 +60,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      try {
-        console.log("Logging in with:", credentials.username);
-        const res = await fetch("/api/login", { 
-          method: "POST",
-          body: JSON.stringify(credentials),
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "include"
-        });
-        
-        if (!res.ok) {
-          // Try to parse the error response as JSON
-          let errorMessage = "Login failed";
-          try {
-            const errorData = await res.json();
-            errorMessage = errorData.error || errorMessage;
-          } catch {
-            // If it's not JSON, try to get the text
-            try {
-              const errorText = await res.text();
-              if (errorText) errorMessage = errorText;
-            } catch {}
-          }
-          
-          console.error("Login error response:", errorMessage);
-          throw new Error(errorMessage);
-        }
-        
-        const userData = await res.json();
-        console.log("Login successful, user data:", userData);
-        return userData;
-      } catch (error) {
-        console.error("Login error:", error);
-        throw error;
+      // Using fetch directly instead of apiRequest to handle the response differently
+      const res = await fetch("/api/login", { 
+        method: "POST",
+        body: JSON.stringify(credentials),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include"
+      });
+      
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Login failed");
       }
+      
+      return await res.json();
     },
     onSuccess: (userData: User) => {
       queryClient.setQueryData(["/api/user"], userData);

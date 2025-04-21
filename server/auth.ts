@@ -66,36 +66,20 @@ export function isAuthenticated(req: Request, res: Response, next: NextFunction)
 
 // Set up authentication
 export function setupAuth(app: Express) {
-  // Configure session middleware with maximum compatibility
+  // Configure session middleware
   app.use(
     session({
-      secret: process.env.SESSION_SECRET || 'yourbuzzfeed-secret-key-for-prod-env',
-      resave: true,
-      saveUninitialized: true,
+      secret: process.env.SESSION_SECRET || 'your-secret-key',
+      resave: false,
+      saveUninitialized: false,
       store: sessionStore,
-      name: 'yourbuzzfeed.sid', // Custom name for cookie
       cookie: {
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days for longer sessions
-        secure: false, // Must be false for non-HTTPS environments
-        httpOnly: true,
+        maxAge: 86400000, // 24 hours
+        secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        path: '/',
       },
     })
   );
-  
-  // Add a more permissive CORS setup
-  app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    
-    if (req.method === 'OPTIONS') {
-      return res.sendStatus(200);
-    }
-    next();
-  });
 
   // Login route
   app.post('/api/login', async (req, res) => {
@@ -109,40 +93,24 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ error: 'Username and password are required' });
       }
 
-      // Log debugging information
-      console.log(`Login attempt for username: ${username}`);
-      
       const user = await storage.getUserByUsername(username);
       
       if (!user) {
-        console.log(`User not found: ${username}`);
         return res.status(401).json({ error: 'Invalid username or password' });
       }
 
-      console.log(`User found, verifying password for ${username}`);
       const passwordValid = await verifyPassword(password, user.password);
       
       if (!passwordValid) {
-        console.log(`Invalid password for ${username}`);
         return res.status(401).json({ error: 'Invalid username or password' });
       }
 
-      // Password is valid, set session
-      console.log(`Password valid for ${username}, setting session`);
+      // Set user ID in session
       req.session.userId = user.id;
       
-      // Explicitly save the session to ensure it's stored
-      req.session.save((err) => {
-        if (err) {
-          console.error('Session save error:', err);
-          return res.status(500).json({ error: 'Failed to create session' });
-        }
-        
-        // Return user without password
-        const { password: _, ...userWithoutPassword } = user;
-        console.log(`Login successful for ${username}`);
-        return res.status(200).json(userWithoutPassword);
-      });
+      // Return user without password
+      const { password: _, ...userWithoutPassword } = user;
+      return res.status(200).json(userWithoutPassword);
     } catch (error) {
       console.error('Login error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -156,7 +124,7 @@ export function setupAuth(app: Express) {
         console.error('Logout error:', err);
         return res.status(500).json({ error: 'Failed to logout' });
       }
-      res.clearCookie('yourbuzzfeed.sid'); // Match the cookie name
+      res.clearCookie('connect.sid');
       res.json({ success: true });
     });
   });
@@ -164,8 +132,6 @@ export function setupAuth(app: Express) {
   // Get current user
   app.get('/api/user', async (req, res) => {
     try {
-      console.log('Session data:', req.session);
-      
       if (!req.session.userId) {
         return res.status(401).json({ error: 'Not authenticated' });
       }
@@ -173,36 +139,14 @@ export function setupAuth(app: Express) {
       const user = await storage.getUser(req.session.userId);
       
       if (!user) {
-        console.error(`User with ID ${req.session.userId} not found in database`);
         return res.status(404).json({ error: 'User not found' });
       }
 
       // Return user without password
       const { password: _, ...userWithoutPassword } = user;
-      console.log(`User data returned for user ${user.username}`);
       res.json(userWithoutPassword);
     } catch (error) {
       console.error('Get user error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
-  
-  // Simple non-session-based admin access for emergency use
-  app.get('/api/emergency-admin', async (req, res) => {
-    try {
-      const admin = await storage.getUserByUsername('admin');
-      
-      if (!admin) {
-        return res.status(404).json({ error: 'Admin user not found' });
-      }
-      
-      const { password: _, ...adminWithoutPassword } = admin;
-      res.json({
-        user: adminWithoutPassword,
-        warning: "Using emergency access - should be used for recovery only"
-      });
-    } catch (error) {
-      console.error('Emergency admin access error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   });

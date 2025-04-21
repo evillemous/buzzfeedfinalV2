@@ -13,24 +13,23 @@ import { getRandomImage } from './unsplash';
 // Sources to scrape news from
 const NEWS_SOURCES = [
   {
-    name: 'Hard-coded Sample Headlines',
-    url: 'https://example.com',
-    selector: '.headline',
+    name: 'Reuters',
+    url: 'https://www.reuters.com/world/',
+    selector: 'a.text__headline',
     titleSelector: '',
-    baseUrl: '',
-    // This will be our fallback source that always works
-    sampleHeadlines: [
-      { title: "Global Markets React to New Economic Policies", url: "https://example.com/markets" },
-      { title: "Scientists Discover Breakthrough in Renewable Energy", url: "https://example.com/science" },
-      { title: "Major Tech Companies Announce New Privacy Features", url: "https://example.com/tech" },
-      { title: "Climate Summit Results in Historic Agreement", url: "https://example.com/climate" },
-      { title: "New Health Study Reveals Benefits of Mediterranean Diet", url: "https://example.com/health" }
-    ]
+    baseUrl: 'https://www.reuters.com'
   },
   {
-    name: 'Hacker News',
-    url: 'https://news.ycombinator.com',
-    selector: '.titleline > a',
+    name: 'AP News',
+    url: 'https://apnews.com/hub/trending-news',
+    selector: '.PageList-items-item a',
+    titleSelector: '.CardHeadline-title',
+    baseUrl: ''
+  },
+  {
+    name: 'NPR',
+    url: 'https://www.npr.org/sections/news/',
+    selector: 'h2.title a',
     titleSelector: '',
     baseUrl: ''
   }
@@ -57,90 +56,38 @@ async function fetchHeadlines(source: typeof NEWS_SOURCES[0]): Promise<Array<{ti
   try {
     console.log(`Fetching headlines from ${source.name}...`);
     
-    // Use sample headlines if available (for our reliable source)
-    if (source.name === 'Hard-coded Sample Headlines' && source.sampleHeadlines) {
-      console.log(`Found ${source.sampleHeadlines.length} headlines from ${source.name}`);
-      return source.sampleHeadlines;
-    }
+    // Fetch the HTML
+    const response = await axios.get(source.url);
+    const html = response.data;
     
-    // Configure axios with headers to mimic a browser request
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Referer': 'https://www.google.com/',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache'
-    };
-
-    // Fetch the data with a timeout
-    const response = await axios.get(source.url, { 
-      headers,
-      timeout: 10000,
-      maxRedirects: 5
-    });
+    // Load HTML into cheerio
+    const $ = cheerio.load(html);
     
+    // Extract headlines
     const headlines: Array<{title: string, url: string}> = [];
     
-    // Handle different sources formats
-    if (source.name === 'Google News') {
-      // Process RSS feed
-      const $ = cheerio.load(response.data, { xmlMode: true });
+    $(source.selector).each((i: number, element: any) => {
+      let title;
+      let url;
       
-      $(source.selector).each((i, element) => {
-        const title = $(element).find('title').text().trim();
-        const url = $(element).find('link').text().trim();
-        
-        if (title && url && title.length > 10 && !headlines.some(h => h.title === title)) {
-          headlines.push({ title, url });
-        }
-      });
-      
-    } else if (source.name === 'News API Org') {
-      // Process JSON API response
-      const data = response.data;
-      
-      if (data.articles && Array.isArray(data.articles)) {
-        data.articles.forEach((article: any) => {
-          if (article.title && article.url && article.title.length > 10) {
-            headlines.push({
-              title: article.title,
-              url: article.url
-            });
-          }
-        });
+      if (source.titleSelector) {
+        title = $(element).find(source.titleSelector).text().trim();
+      } else {
+        title = $(element).text().trim();
       }
       
-    } else {
-      // Process HTML
-      const $ = cheerio.load(response.data);
+      url = $(element).attr('href');
       
-      $(source.selector).each((i, element) => {
-        let title;
-        let url;
-        
-        if (source.titleSelector) {
-          title = $(element).find(source.titleSelector).text().trim();
-        } else {
-          title = $(element).text().trim();
-        }
-        
-        // Remove extra whitespace and normalize
-        title = title.replace(/\s+/g, ' ').trim();
-        
-        url = $(element).attr('href');
-        
-        // Handle relative URLs
-        if (url && url.startsWith('/')) {
-          url = source.baseUrl + url;
-        }
-        
-        // Only add valid headlines
-        if (title && url && title.length > 10 && !headlines.some(h => h.title === title)) {
-          headlines.push({ title, url });
-        }
-      });
-    }
+      // Handle relative URLs
+      if (url && url.startsWith('/')) {
+        url = source.baseUrl + url;
+      }
+      
+      // Only add valid headlines
+      if (title && url && title.length > 10) {
+        headlines.push({ title, url });
+      }
+    });
     
     console.log(`Found ${headlines.length} headlines from ${source.name}`);
     return headlines.slice(0, 5); // Limit to 5 headlines per source
@@ -184,7 +131,7 @@ async function generateNewsArticle(headline: { title: string, url: string }): Pr
     console.log(`Generating article for headline: "${headline.title}"`);
     
     // Determine category
-    const categoryName = 'News'; // Always use News category to match our DB
+    const categoryName = determineCategory(headline.title);
     
     // Generate article content using OpenAI
     const prompt = `Write a detailed news article based on this headline: "${headline.title}". 
