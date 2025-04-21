@@ -1,0 +1,88 @@
+
+Search
+
+Live tail
+EDT
+
+
+==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+==> Cloning from https://github.com/evillemous/buzzfeedfinal
+==> Checking out commit b4c0bc9cc97ec650b9c830fc0d5f40f9a57e1059 in branch main
+==> Downloading cache...
+==> Transferred 213MB in 8s. Extraction took 4s.
+==> Using Node.js version 22.14.0 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Using Bun version 1.1.0 (default)
+==> Docs on specifying a bun version: https://render.com/docs/bun-version
+==> Running build command 'node render-build.cjs && node emergency-render-fix.cjs'...
+=== RENDER BUILD HELPER ===
+Running on Render: Yes
+1. Installing dependencies...
+added 455 packages, and audited 456 packages in 6s
+75 packages are looking for funding
+  run `npm fund` for details
+2 moderate severity vulnerabilities
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+✅ Dependencies installed successfully with npm ci
+2. Checking for Vite plugins...
+⚠️ @vitejs/plugin-react not found, installing...
+up to date, audited 456 packages in 2s
+75 packages are looking for funding
+  run `npm fund` for details
+2 moderate severity vulnerabilities
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+✅ @replit/vite-plugin-shadcn-theme-json is installed
+⚠️ @replit/vite-plugin-cartographer not found, installing...
+up to date, audited 456 packages in 956ms
+75 packages are looking for funding
+  run `npm fund` for details
+2 moderate severity vulnerabilities
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+⚠️ @replit/vite-plugin-runtime-error-modal not found, installing...
+up to date, audited 456 packages in 967ms
+75 packages are looking for funding
+  run `npm fund` for details
+2 moderate severity vulnerabilities
+To address all issues, run:
+  npm audit fix
+Run `npm audit` for details.
+✅ @tailwindcss/vite is installed
+3. Running build...
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+failed to load config from /opt/render/project/src/vite.config.ts
+error during build:
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package '@vitejs/plugin-react' imported from /opt/render/project/src/vite.config.ts.timestamp-1745198599207-877444c4d8214.mjs
+    at Object.getPackageJSONURL (node:internal/modules/package_json_reader:268:9)
+    at packageResolve (node:internal/modules/esm/resolve:768:81)
+    at moduleResolve (node:internal/modules/esm/resolve:854:18)
+    at defaultResolve (node:internal/modules/esm/resolve:984:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:685:12)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:634:25)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:617:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:273:38)
+    at ModuleJob._link (node:internal/modules/esm/module_job:135:49)
+❌ Build failed: Error: Command failed: npm run build
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at checkExecSyncError (node:child_process:882:11)
+    at execSync (node:child_process:954:15)
+    at Object.<anonymous> (/opt/render/project/src/render-build.cjs:71:3)
+    at Module._compile (node:internal/modules/cjs/loader:1554:14)
+    at Object..js (node:internal/modules/cjs/loader:1706:10)
+    at Module.load (node:internal/modules/cjs/loader:1289:32)
+    at Function._load (node:internal/modules/cjs/loader:1108:12)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14) {
+  status: 1,
+  signal: null,
+  output: [ null, null, null ],
+  pid: 194,
+  stdout: null,
+  stderr: null
+}
