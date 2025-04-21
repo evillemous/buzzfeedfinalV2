@@ -5,6 +5,32 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || '' 
 });
 
+// Retry logic for handling rate limits
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, delay = 2000): Promise<T> {
+  let retries = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error: any) { // Type assertion for error
+      retries++;
+      if (retries > maxRetries) {
+        throw error;
+      }
+      
+      // Check if it's a rate limit error
+      const isRateLimit = (error.status === 429) || 
+        (error.message && typeof error.message === 'string' && error.message.includes('rate limit'));
+      
+      if (!isRateLimit) {
+        throw error;
+      }
+      
+      console.log(`Rate limit hit, retrying in ${delay}ms (attempt ${retries}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, delay * retries));
+    }
+  }
+}
+
 // Content types
 export type ContentType = 'article' | 'listicle';
 
