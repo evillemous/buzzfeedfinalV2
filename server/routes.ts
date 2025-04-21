@@ -314,6 +314,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Test login endpoint that directly sets session (for debugging)
+  app.get('/api/debug-login', async (req, res) => {
+    try {
+      // Find the admin user
+      const admin = await storage.getUserByUsername('admin');
+      
+      if (!admin) {
+        return res.status(404).json({ error: 'Admin user not found' });
+      }
+      
+      // Set session manually
+      req.session.userId = admin.id;
+      
+      // Force session save
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({ error: 'Session save failed', details: err.message });
+        }
+        
+        // Return debug info
+        const { password: _, ...userWithoutPassword } = admin;
+        
+        res.json({ 
+          message: 'Debug login successful',
+          user: userWithoutPassword,
+          sessionID: req.sessionID,
+          session: req.session,
+          cookies: req.headers.cookie
+        });
+      });
+    } catch (error) {
+      console.error('Debug login error:', error);
+      res.status(500).json({ 
+        error: 'Debug login failed', 
+        details: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Simplified article creation for testing
   app.post('/api/ai/create-test-article', async (req, res) => {
     try {

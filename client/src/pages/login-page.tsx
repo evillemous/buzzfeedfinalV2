@@ -78,6 +78,31 @@ export default function LoginPage() {
     }
   };
 
+  // Alternative debug login
+  const handleDebugLogin = async () => {
+    try {
+      setIsLoading(true);
+      setErrorMessage("");
+      
+      const response = await fetch('/api/debug-login');
+      const data = await response.json();
+      console.log('Debug login response:', data);
+      
+      if (response.ok) {
+        // Update query cache
+        queryClient.setQueryData(["/api/user"], data.user);
+        window.location.href = '/admin'; // Hard refresh after login
+      } else {
+        setErrorMessage("Debug login failed: " + data.error);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMessage("Debug login error: " + (err.message || "Unknown error"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="container flex items-center justify-center min-h-screen py-12">
       <Card className="w-full max-w-md">
@@ -119,7 +144,7 @@ export default function LoginPage() {
               />
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex flex-col gap-3">
             <Button
               type="submit"
               className="w-full"
@@ -133,6 +158,18 @@ export default function LoginPage() {
               ) : (
                 "Login"
               )}
+            </Button>
+            
+            {/* Debug login button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleDebugLogin}
+              disabled={isLoading}
+              className="text-xs text-muted-foreground"
+            >
+              Alternative Login
             </Button>
           </CardFooter>
         </form>
