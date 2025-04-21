@@ -13,25 +13,25 @@ import { getRandomImage } from './unsplash';
 // Sources to scrape news from
 const NEWS_SOURCES = [
   {
-    name: 'NY Times Archive',
-    url: 'https://www.nytimes.com/section/us',
-    selector: 'div.css-1cp3ece h3 a',
-    titleSelector: '',
-    baseUrl: 'https://www.nytimes.com'
+    name: 'Google News',
+    url: 'https://news.google.com/rss',
+    selector: 'item',
+    titleSelector: 'title',
+    baseUrl: ''
   },
   {
-    name: 'BBC News',
-    url: 'https://www.bbc.com/news',
-    selector: 'a.gs-c-promo-heading',
-    titleSelector: '',
-    baseUrl: 'https://www.bbc.com'
+    name: 'News API Org',
+    url: 'https://newsapi.org/v2/top-headlines?country=us&apiKey=6f2a4bcb70ad4fac82c1c4803f8cb157',
+    selector: 'articles',
+    titleSelector: 'title',
+    baseUrl: ''
   },
   {
-    name: 'The Guardian',
-    url: 'https://www.theguardian.com/us-news',
-    selector: 'a.u-faux-block-link__overlay',
+    name: 'Hacker News',
+    url: 'https://news.ycombinator.com',
+    selector: '.titleline > a',
     titleSelector: '',
-    baseUrl: 'https://www.theguardian.com'
+    baseUrl: ''
   }
 ];
 
@@ -59,53 +59,81 @@ async function fetchHeadlines(source: typeof NEWS_SOURCES[0]): Promise<Array<{ti
     // Configure axios with headers to mimic a browser request
     const headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,application/json,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.9',
       'Referer': 'https://www.google.com/',
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache'
     };
-    
-    // Fetch the HTML with a timeout
+
+    // Fetch the data with a timeout
     const response = await axios.get(source.url, { 
       headers,
       timeout: 10000,
       maxRedirects: 5
     });
     
-    const html = response.data;
-    
-    // Load HTML into cheerio
-    const $ = cheerio.load(html);
-    
-    // Extract headlines
     const headlines: Array<{title: string, url: string}> = [];
     
-    $(source.selector).each((i: number, element: any) => {
-      let title;
-      let url;
+    // Handle different sources formats
+    if (source.name === 'Google News') {
+      // Process RSS feed
+      const $ = cheerio.load(response.data, { xmlMode: true });
       
-      if (source.titleSelector) {
-        title = $(element).find(source.titleSelector).text().trim();
-      } else {
-        title = $(element).text().trim();
+      $(source.selector).each((i, element) => {
+        const title = $(element).find('title').text().trim();
+        const url = $(element).find('link').text().trim();
+        
+        if (title && url && title.length > 10 && !headlines.some(h => h.title === title)) {
+          headlines.push({ title, url });
+        }
+      });
+      
+    } else if (source.name === 'News API Org') {
+      // Process JSON API response
+      const data = response.data;
+      
+      if (data.articles && Array.isArray(data.articles)) {
+        data.articles.forEach((article: any) => {
+          if (article.title && article.url && article.title.length > 10) {
+            headlines.push({
+              title: article.title,
+              url: article.url
+            });
+          }
+        });
       }
       
-      // Remove extra whitespace and normalize
-      title = title.replace(/\s+/g, ' ').trim();
+    } else {
+      // Process HTML
+      const $ = cheerio.load(response.data);
       
-      url = $(element).attr('href');
-      
-      // Handle relative URLs
-      if (url && url.startsWith('/')) {
-        url = source.baseUrl + url;
-      }
-      
-      // Only add valid headlines
-      if (title && url && title.length > 10 && !headlines.some(h => h.title === title)) {
-        headlines.push({ title, url });
-      }
-    });
+      $(source.selector).each((i, element) => {
+        let title;
+        let url;
+        
+        if (source.titleSelector) {
+          title = $(element).find(source.titleSelector).text().trim();
+        } else {
+          title = $(element).text().trim();
+        }
+        
+        // Remove extra whitespace and normalize
+        title = title.replace(/\s+/g, ' ').trim();
+        
+        url = $(element).attr('href');
+        
+        // Handle relative URLs
+        if (url && url.startsWith('/')) {
+          url = source.baseUrl + url;
+        }
+        
+        // Only add valid headlines
+        if (title && url && title.length > 10 && !headlines.some(h => h.title === title)) {
+          headlines.push({ title, url });
+        }
+      });
+    }
     
     console.log(`Found ${headlines.length} headlines from ${source.name}`);
     return headlines.slice(0, 5); // Limit to 5 headlines per source
