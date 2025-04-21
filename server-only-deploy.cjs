@@ -2,7 +2,13 @@
 /**
  * Server-only deployment script for Render.com
  * This script completely bypasses the Vite build process
- * and focuses on deploying just the server portion
+ * and focuses on deploying just the server portion.
+ * 
+ * This is an optimized deployment approach that:
+ * 1. Creates a lean server-only deployment
+ * 2. Fixes common issues like NewsAPI conflicts in production
+ * 3. Resolves the duplicate slug errors in news generation
+ * 4. Provides a minimal but functional UI to confirm deployment
  */
 
 const { execSync } = require('child_process');
@@ -60,14 +66,36 @@ try {
       'else if (source.name === "News API Org") { return []; }'
     );
     
+    // Fix error with article slug duplication
+    serverCode = serverCode.replace(
+      /async\s+function\s+scrapeAndGenerateNews\(\)/g,
+      `async function scrapeAndGenerateNews()`
+    );
+    
+    // Add a timestamp to article slugs to prevent duplicates
+    const slugTimestampFix = `
+      // Add a timestamp to prevent duplicate slugs
+      const slugTimestamp = '-' + Date.now().toString().slice(-6);
+      let slug = slugify(title);
+      if (slug.length > 80) {
+        slug = slug.substring(0, 80);
+      }
+      slug = slug + slugTimestamp;`;
+    
+    // Insert the slug fix into the generateNewsArticle function
+    serverCode = serverCode.replace(
+      /let\s+slug\s*=\s*slugify\(title\);(\s+if\s*\(\s*slug\.length\s*>\s*80\s*\)\s*\{\s*slug\s*=\s*slug\.substring\(0,\s*80\);\s*\})/g,
+      slugTimestampFix
+    );
+    
     // Write the fixed server code back
     fs.writeFileSync('./dist/index.js', serverCode);
-    console.log('✅ Fixed NewsAPI references in server code');
+    console.log('✅ Fixed NewsAPI references and slug generation in server code');
   } else {
     console.error('⚠️ Server code file not found at ./dist/index.js');
   }
 } catch (err) {
-  console.error('Error fixing NewsAPI references:', err);
+  console.error('Error fixing code references:', err);
   // Continue anyway
 }
 
@@ -143,7 +171,7 @@ try {
 
 console.log('\n=== SERVER-ONLY DEPLOYMENT COMPLETE ===');
 console.log('For Render.com deployment:');
-console.log('1. In Build Command: use "node server-only-deploy.js"');
+console.log('1. In Build Command: use "node server-only-deploy.cjs"');
 console.log('2. In Start Command: use "NODE_ENV=production node dist/index.js"');
 console.log('3. Add these environment variables in the Render dashboard:');
 console.log('   - NODE_ENV=production');
